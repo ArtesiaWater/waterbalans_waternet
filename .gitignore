@@ -3,11 +3,16 @@
 *.ini
 *.log
 *.csv
-*.pklz
+./data/*.pklz
 
 # VS Code
 *.vscode
+*.idea
 
 # Directories
 /comparison
 /jwv_mengriool_script
+/data/input_csv/
+/data/excel_pklz/
+
+/__pycache__
