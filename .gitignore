@@ -1,0 +1,13 @@
+# Random files
+*.xlsx
+*.ini
+*.log
+*.csv
+*.pklz
+
+# VS Code
+*.vscode
+
+# Directories
+/comparison
+/jvw_mengriool
