@@ -6,7 +6,7 @@ Auteurs:
 - R.A. Collenteur, Artesia Water 2018
 - D.A. Brakenhoff, Artesia Water 2018
 
-![Logo Waterbalansen](https://github.com/ArtesiaWater/waterbalans/blob/master/logo.png?raw=true "Python Module Waterbalansen" =100x)
+<img src="https://github.com/ArtesiaWater/waterbalans/blob/master/logo.png?raw=true" alt="Logo Waterbalansen" width="100"/>
 
 ## Installatie
 
