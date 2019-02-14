@@ -1,5 +1,4 @@
 # Random files
-*.xlsx
 *.ini
 *.log
 *.csv
@@ -11,6 +10,7 @@
 
 # Directories
 /comparison
+/comparison/*
 /jwv_mengriool_script
 /data/input_csv/
 /data/excel_pklz/
