@@ -8,6 +8,7 @@ import pandas as pd
 import shutil
 from pandas.core.common import SettingWithCopyWarning
 import waterbalans as wb
+from util import unzip_changed_files
 mpl.interactive(True)
 
 # Set warnings to error
@@ -22,16 +23,19 @@ starttime = pd.datetime.now()
 ##########################################
 # User options
 
-name = "2500-EAG-6"  # which EAG to run
+name = "2140-EAG-3"  # which EAG to run
 use_excel_PE = True  # overwrite FEWS precipitation and evaporation with series from Excel file
-add_missing_series = False  # True if you want to add missing series from Excel balance, specify exact names below
-missing_series_names = {"Gemaal": ["Veldhuisweg", "pomp2"],
-                        "Inlaat1": "vistrappen"}  # names of the missing series (used to look up series in series from uitgangspunten)
-missing_series_fac = [1.0, 1.0]  # factors to make sure uitlaat goes out of system
-column_names = {"Inlaat1": "vistrappen"}  # compare columns from Python and Excel in dict = {python name: excel name}
-manual_add_htargets = False  # if hTargets need to be added or overwritten, define below:
-hTargetMin = 0.01  # positive number, relative to hTarget
-hTargetMax = 0.01  # positive number, relative to hTarget
+add_missing_series = True  # True if you want to add missing series from Excel balance, specify exact names below
+missing_series_names = {"Inlaat1": "Watsonweg (EAG-6)",
+                        "Uitlaat1": "provinciale weg",
+                        "Uitlaat2": "boterdijk"}  # names of the missing series (used to look up series in series from uitgangspunten)
+missing_series_fac = [1.0, -1.0, -1.0]  # factors to make sure uitlaat goes out of system
+column_names = {"Inlaat1": "Watsonweg (EAG-6)",
+                "Uitlaat1": "provinciale weg",
+                "Uitlaat2": "boterdijk"}  # compare columns from Python and Excel in dict = {python name: excel name}
+manual_add_htargets = True  # if hTargets need to be added or overwritten, define below:
+hTargetMin = 0.05  # positive number, relative to hTarget
+hTargetMax = 0.00  # positive number, relative to hTarget
 use_waterlevel_series = False
 plot_knmi_comparison = False  # add KNMI series for prec/evap to comparison between FEWS/Excel
 tmin = "2000"  # start simulation time for Python
@@ -51,6 +55,8 @@ excelfiles = ["2140-EAG-3", "2140-EAG-6", "2250-EAG-2", "2500-EAG-6", "2501-EAG-
               "3303-EAG-1", "3360-EAG-1"]
 
 # Create directory for saving output
+if not os.path.exists("./comparison"):
+    os.mkdir("./comparison")
 if not os.path.exists(os.path.join("./comparison", name)):
     print("Creating directory for ... {}".format(name))
     outputdir = os.path.join("./comparison", name)
@@ -66,15 +72,18 @@ except (FileNotFoundError, NameError):
 try:
     shutil.copy(__file__, outputdir)
 except NameError:
-    __file__ = r"G:\My Drive\k\01projekt\17026004_WATERNET_Waterbalansen\05pyfiles\run_and_compare_eag.py"
+    __file__ = r"./run_and_compare_eag.py"
     os.remove(os.path.join(outputdir, os.path.basename(__file__)))
+    shutil.copy(__file__, outputdir)
 
 # %%
 # Set database url connection
 wb.pi.setClient(wsdl='http://localhost:8081/FewsPiService/fewspiservice?wsdl')
 
 # Get all files
-csvdir = r"C:/Users/dbrak/Documents/01-Projects/17026004_WATERNET_Waterbalansen/03data/DataExport_frompython2"
+unzip_changed_files("./data/input_csv.zip", "./data/input_csv", 
+                    check_time=True, check_size=True, debug=True)
+csvdir = r"./data/input_csv"
 files = [i for i in os.listdir(csvdir) if i.endswith(".csv")]
 eag_df = pd.DataFrame(data=files, columns=["filenames"])
 eag_df["ID"] = eag_df.filenames.apply(lambda s: s.split("_")[2].split(".")[0])
@@ -84,7 +93,8 @@ file_df = eag_df.pivot(index="ID", columns="type", values="filenames")
 file_df.dropna(how="any", axis=0, inplace=True)
 
 # Excel directory
-exceldir = r"C:\Users\dbrak\Documents\01-Projects\17026004_WATERNET_Waterbalansen\03data\balansen"
+unzip_changed_files("./data/excel_pklz.zip", "./data/excel_pklz", check_time=True, check_size=True)
+exceldir = r"./data/excel_pklz"
 
 # Get CSV files
 fbuckets, fparams, freeks = file_df.loc[name]
