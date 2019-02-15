@@ -23,26 +23,29 @@ starttime = pd.datetime.now()
 ##########################################
 # User options
 
-name = "2140-EAG-3"  # which EAG to run
+name = "2500-EAG-6"  # which EAG to run
 use_excel_PE = True  # overwrite FEWS precipitation and evaporation with series from Excel file
 add_missing_series = True  # True if you want to add missing series from Excel balance, specify exact names below
-missing_series_names = {"Inlaat1": "Watsonweg (EAG-6)",
-                        "Uitlaat1": "provinciale weg",
-                        "Uitlaat2": "boterdijk"}  # names of the missing series (used to look up series in series from uitgangspunten)
-missing_series_fac = [1.0, -1.0, -1.0]  # factors to make sure uitlaat goes out of system
-column_names = {"Inlaat1": "Watsonweg (EAG-6)",
-                "Uitlaat1": "provinciale weg",
-                "Uitlaat2": "boterdijk"}  # compare columns from Python and Excel in dict = {python name: excel name}
+missing_series_names = {"Gemaal": ["Pondskoekersluis, Pomp 1 bedrijf", "Pondskoekersluis, Pomp 2 bedrijf"],
+                        "Peil": "peil",
+                        "Inlaat1": "Tweede bedijking",
+                        "Inlaat2": "Wilnis veldzijde"}  # names of the missing series (used to look up series in series from uitgangspunten)
+missing_series_fac = [1.0, 1.0, 1.0, 1.0]  # factors to make sure uitlaat goes out of system
+column_names = {"q_cso": "gerioleerd",
+                "Inlaat1": "Tweede bedijking",
+                "Inlaat2": "Inlaten vanuit tussenboezem/ wilnis veldzijde",
+                "inlaat": "Inlaten vanuit kromme mijdrecht"}  # compare columns from Python and Excel in dict = {python name: excel name}
 manual_add_htargets = True  # if hTargets need to be added or overwritten, define below:
-hTargetMin = 0.05  # positive number, relative to hTarget
-hTargetMax = 0.00  # positive number, relative to hTarget
-use_waterlevel_series = False
+hTargetMin = -0.05  # positive number, relative to hTarget
+hTargetMax = 0.05  # positive number, relative to hTarget
+use_waterlevel_series = True
 plot_knmi_comparison = False  # add KNMI series for prec/evap to comparison between FEWS/Excel
 tmin = "2000"  # start simulation time for Python
 tminp = "1996"  # tmin for in plots, can be different from simulation tmin
 tmax = "2014-12-31"  # end simulation time for Python
 savefig = False
 do_postproc = False
+excel_compare = True
 
 ##########################################
 
@@ -126,10 +129,15 @@ excelseries = excelseries.loc[valid_index]
 
 if add_missing_series:
     for fac, (name, missing_series) in zip(missing_series_fac, missing_series_names.items()):
-        reeks = fac*excelseries.loc[:, missing_series].fillna(0.0)
+        reeks = fac*excelseries.loc[:, missing_series]
         if isinstance(reeks, pd.DataFrame):
-            reeks = reeks.sum(axis=1)
-        e.add_eag_series(reeks, name=name, tmin=tmin, tmax=tmax)
+            reeks = reeks.fillna(0.0).sum(axis=1)
+        if name == "Peil":
+            e.add_eag_series(reeks, name=name, tmin=tmin, tmax=tmax, 
+                            fillna=True, method="ffill")
+        else:
+            e.add_eag_series(reeks, name=name, tmin=tmin, tmax=tmax, 
+                            fillna=True, method=0.0)
 
 # Overwrite FEWS Neerslag/Verdamping with Excel series
 if use_excel_PE:
@@ -234,7 +242,12 @@ if do_postproc:
     if savefig:
         ax.figure.savefig(os.path.join(outputdir, "linestack_chloride-fractions.png"), dpi=150, 
                         bbox_inches="tight")
+    
+postproctime = pd.datetime.now()
+if do_postproc:
+    print("Time elapsed postproc: {0:.1f} seconds".format((postproctime - postruntime).total_seconds()))
 
+if excel_compare:
     # %% Compare to Excel
     # Read Excel Balance Data (see scrape_excelbalansen.py for details)
     excelbalance = pd.read_pickle(os.path.join(exceldir, "{}_wbalance.pklz".format(e.name)), 
@@ -284,8 +297,9 @@ if do_postproc:
     if savefig:
         ax.figure.savefig(os.path.join(outputdir, "line_waterlevel_comparison_excel.png"), dpi=150, 
                         bbox_inches="tight")
+    
+    print("Time elapsed excel comparison: {0:.1f} seconds".format((pd.datetime.now() - postruntime).total_seconds()))
 
-    if savefig:
-        plt.close("all")
+if savefig:
+    plt.close("all")
 
-    print("Time elapsed postproc: {0:.1f} seconds".format((pd.datetime.now() - postruntime).total_seconds()))
