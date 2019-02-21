@@ -3,6 +3,7 @@
 *.log
 *.csv
 ./data/*.pklz
+/data/~*
 
 # VS Code
 *.vscode
