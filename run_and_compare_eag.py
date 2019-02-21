@@ -26,26 +26,20 @@ starttime = pd.datetime.now()
 name = "2500-EAG-6"  # which EAG to run
 use_excel_PE = True  # overwrite FEWS precipitation and evaporation with series from Excel file
 add_missing_series = True  # True if you want to add missing series from Excel balance, specify exact names below
-missing_series_names = {"Gemaal": ["Pondskoekersluis, Pomp 1 bedrijf", "Pondskoekersluis, Pomp 2 bedrijf"],
-                        "Peil": "peil",
-                        "Inlaat1": "Tweede bedijking",
-                        "Inlaat2": "Wilnis veldzijde"}  # names of the missing series (used to look up series in series from uitgangspunten)
-missing_series_fac = [1.0, 1.0, 1.0, 1.0]  # factors to make sure uitlaat goes out of system
 column_names = {"q_cso": "gerioleerd",
-                "Inlaat1": "Tweede bedijking",
                 "Inlaat2": "Inlaten vanuit tussenboezem/ wilnis veldzijde",
                 "inlaat": "Inlaten vanuit kromme mijdrecht"}  # compare columns from Python and Excel in dict = {python name: excel name}
 manual_add_htargets = True  # if hTargets need to be added or overwritten, define below:
-hTargetMin = -0.05  # positive number, relative to hTarget
-hTargetMax = 0.05  # positive number, relative to hTarget
-use_waterlevel_series = True
+hTargetMin = -0.05  # positive number = relative to hTarget, negative number = relative to waterlevel obs
+hTargetMax = 0.05  # positive number = relative to hTarget, negative number = relative to waterlevel obs
+use_waterlevel_series = True  # whether or not to simulate using the waterlevel series
 plot_knmi_comparison = False  # add KNMI series for prec/evap to comparison between FEWS/Excel
-tmin = "2000"  # start simulation time for Python
+tmin = "1996"  # start simulation time for Python
 tminp = "1996"  # tmin for in plots, can be different from simulation tmin
-tmax = "2014-12-31"  # end simulation time for Python
-savefig = False
-do_postproc = False
-excel_compare = True
+tmax = "2016-11-30"  # end simulation time for Python
+savefig = False  # save figures to outputdir
+do_postproc = False  # create all figures
+excel_compare = True  # compare output to Excel
 
 ##########################################
 
@@ -117,32 +111,70 @@ reeksen = pd.read_csv(os.path.join(csvdir, freeks), delimiter=";",
 if e.name == "2500-EAG-6":
     reeksen.loc[0, "Waarde"] = 6000.
     reeksen.loc[1, "Waarde"] = 0.
+    e.buckets[16353].parameters.loc["hInit_1", "Waarde"] = 0.45
 
 # add default series
-e.add_series(reeksen)
+e.add_series(reeksen, tmin=tmin, tmax=tmax)
 
 # read missing series 'reeks' and add as inflow to EAG
 excelseries = pd.read_pickle(os.path.join(exceldir, "{}_series.pklz".format(name)), compression="zip")
-excelseries.dropna(how="all", axis=1, inplace=True)
 valid_index = excelseries.index.dropna()
 excelseries = excelseries.loc[valid_index]
 
+tmin = pd.Timestamp(tmin)
+tmax = np.min([pd.Timestamp(tmax), excelseries.index[-1]])  # pick earliest tmax to avoid FutureWarnings about KeyErrors
+
 if add_missing_series:
-    for fac, (name, missing_series) in zip(missing_series_fac, missing_series_names.items()):
-        reeks = fac*excelseries.loc[:, missing_series]
-        if isinstance(reeks, pd.DataFrame):
-            reeks = reeks.fillna(0.0).sum(axis=1)
-        if name == "Peil":
-            e.add_eag_series(reeks, name=name, tmin=tmin, tmax=tmax, 
-                            fillna=True, method="ffill")
-        else:
-            e.add_eag_series(reeks, name=name, tmin=tmin, tmax=tmax, 
-                            fillna=True, method=0.0)
+    columns = ["neerslag", "verdamping", "peil", 
+               "Gemaal1", "Gemaal2", "Gemaal3", "Gemaal4",
+               "Inlaat voor calibratie", "gemengd gerioleerd stelsel", 
+               "Inlaat1", "Inlaat2", "Inlaat3", "Inlaat4", 
+               "Uitlaat1", "Uitlaat2", "Uitlaat3", "Uitlaat4"]
+    # Gemaal
+    colmask = [True if icol.startswith("Gemaal") else False for icol in columns]
+    gemaal_series = excelseries.loc[:, colmask]
+    gemaal_series = gemaal_series.dropna(how="all", axis=1)
+    gemaal = gemaal_series.sum(axis=1)
+    e.add_eag_series(gemaal, name="Gemaal", tmin=tmin, tmax=tmax, 
+                     fillna=True, method=0.0)
+
+    # Inlaat
+    colmask = [True if icol.startswith("Inlaat") else False for icol in columns]
+    inlaat_series = excelseries.loc[:, colmask]
+    inlaat_series = inlaat_series.drop("Inlaat\nvoor calibratie", axis=1)
+    inlaat_series = inlaat_series.dropna(how="all", axis=1)
+    for jcol in range(inlaat_series.shape[1]):
+        if not "Inlaat{}".format(jcol+1) in column_names.keys():
+            column_names.update({"Inlaat{}".format(jcol+1): inlaat_series.columns[jcol]})
+        e.add_eag_series(inlaat_series.iloc[:, jcol], name="Inlaat{}".format(jcol+1), 
+                         tmin=tmin, tmax=tmax, fillna=True, method=0.0)
+
+    # Uitlaat
+    colmask = [True if icol.startswith("Uitlaat") else False for icol in columns]
+    uitlaat_series = excelseries.loc[:, colmask]
+    uitlaat_series = uitlaat_series.dropna(how="all", axis=1)
+    for jcol in range(uitlaat_series.shape[1]):
+        if not "Uitlaat{}".format(jcol+1) in column_names.keys():
+            column_names.update({"Uitlaat{}".format(jcol+1): uitlaat_series.columns[jcol]})
+        e.add_eag_series(-1*uitlaat_series.iloc[:, jcol], name="Uitlaat{}".format(jcol+1), 
+                         tmin=tmin, tmax=tmax, fillna=True, method=0.0)        
+    
+    # Peil
+    colmask = [True if icol.lower().startswith("peil") else False for icol in columns]
+    peil = excelseries.loc[:, colmask]
+    e.add_eag_series(peil, name="Peil", tmin=tmin, tmax=tmax, 
+                     fillna=True, method="ffill")
 
 # Overwrite FEWS Neerslag/Verdamping with Excel series
 if use_excel_PE:
-    e.series.loc[:, "Neerslag"] = excelseries.loc[e.series.index, excelseries.columns[0]].fillna(0.0) * 1e-3
-    e.series.loc[:, "Verdamping"] = excelseries.loc[e.series.index, excelseries.columns[1]].fillna(0.0) * 1e-3
+    if e.series.index[0] in excelseries.index and e.series.index[-1] in excelseries.index:
+        e.series.loc[:, "Neerslag"] = excelseries.loc[e.series.index, excelseries.columns[0]].fillna(0.0) * 1e-3
+        e.series.loc[:, "Verdamping"] = excelseries.loc[e.series.index, excelseries.columns[1]].fillna(0.0) * 1e-3
+    else:
+        e.series.loc[e.series.loc[tmin:tmax].index, "Neerslag"] = excelseries.loc[e.series.loc[tmin:tmax].index, 
+                                                                    excelseries.columns[0]].fillna(0.0) * 1e-3
+        e.series.loc[e.series.loc[tmin:tmax].index, "Verdamping"] = excelseries.loc[e.series.loc[tmin:tmax].index, 
+                                                                    excelseries.columns[1]].fillna(0.0) * 1e-3
 
 # Simuleer de waterbalans
 params = pd.read_csv(os.path.join(csvdir, fparams), delimiter=";",
@@ -302,4 +334,3 @@ if excel_compare:
 
 if savefig:
     plt.close("all")
-
