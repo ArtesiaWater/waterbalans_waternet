@@ -23,16 +23,14 @@ starttime = pd.datetime.now()
 ##########################################
 # User options
 
-name = "2500-EAG-6"  # which EAG to run
+name = "3360-EAG-1"  # which EAG to run
 use_excel_PE = True  # overwrite FEWS precipitation and evaporation with series from Excel file
 add_missing_series = True  # True if you want to add missing series from Excel balance, specify exact names below
-column_names = {"q_cso": "gerioleerd",
-                "Inlaat2": "Inlaten vanuit tussenboezem/ wilnis veldzijde",
-                "inlaat": "Inlaten vanuit kromme mijdrecht"}  # compare columns from Python and Excel in dict = {python name: excel name}
+column_names = {}  # compare columns from Python and Excel in dict = {python name: excel name}
 manual_add_htargets = True  # if hTargets need to be added or overwritten, define below:
-hTargetMin = -0.05  # positive number = relative to hTarget, negative number = relative to waterlevel obs
-hTargetMax = 0.05  # positive number = relative to hTarget, negative number = relative to waterlevel obs
-use_waterlevel_series = True  # whether or not to simulate using the waterlevel series
+# hTargetMin = -0.00  # negative number = relative to hTarget, positive number = relative to waterlevel obs
+# hTargetMax = -0.00  # negative number = relative to hTarget, positive number = relative to waterlevel obs
+use_waterlevel_series = False  # whether or not to simulate using the waterlevel series
 plot_knmi_comparison = False  # add KNMI series for prec/evap to comparison between FEWS/Excel
 tmin = "1996"  # start simulation time for Python
 tminp = "1996"  # tmin for in plots, can be different from simulation tmin
@@ -75,7 +73,7 @@ except NameError:
 
 # %%
 # Set database url connection
-wb.pi.setClient(wsdl='http://localhost:8081/FewsPiService/fewspiservice?wsdl')
+# wb.pi.setClient(wsdl='http://localhost:8081/FewsPiService/fewspiservice?wsdl')
 
 # Get all files
 unzip_changed_files("./data/input_csv.zip", "./data/input_csv", 
@@ -85,16 +83,17 @@ files = [i for i in os.listdir(csvdir) if i.endswith(".csv")]
 eag_df = pd.DataFrame(data=files, columns=["filenames"])
 eag_df["ID"] = eag_df.filenames.apply(lambda s: s.split("_")[2].split(".")[0])
 eag_df["type"] = eag_df.filenames.apply(lambda s: s.split("_")[0])
-eag_df.drop_duplicates(subset=["ID", "type"], keep="first", inplace=True)
+eag_df.drop_duplicates(subset=["ID", "type"], keep="last", inplace=True)
 file_df = eag_df.pivot(index="ID", columns="type", values="filenames")
 file_df.dropna(how="any", axis=0, inplace=True)
 
 # Excel directory
-unzip_changed_files("./data/excel_pklz.zip", "./data/excel_pklz", check_time=True, check_size=True)
+unzip_changed_files("./data/excel_pklz.zip", "./data/excel_pklz", check_time=True, 
+                    check_size=True)
 exceldir = r"./data/excel_pklz"
 
 # Get CSV files
-fbuckets, fparams, freeks = file_df.loc[name]
+fbuckets, fparams, freeks, _ = file_df.loc[name]
 buckets = pd.read_csv(os.path.join(csvdir, fbuckets), delimiter=";",
                         decimal=",")
 buckets["OppWaarde"] = pd.to_numeric(buckets.OppWaarde)
@@ -105,7 +104,7 @@ e = wb.create_eag(eag_id, name, buckets, use_waterlevel_series=use_waterlevel_se
 
 # Lees de tijdreeksen in
 reeksen = pd.read_csv(os.path.join(csvdir, freeks), delimiter=";",
-                    decimal=",")
+                      decimal=",")
 
 # DELETE FOR OTHER EAGs
 if e.name == "2500-EAG-6":
@@ -218,9 +217,9 @@ if "MengRiool" in buckets.BakjePyCode.values:
     params.append(newline)
 
 # Add missing hTargetMin and hTargetMax to params
-if manual_add_htargets:
-    params.loc["hTargetMin_1"] = 14, 19673, name, e.water.id, 1, "hTargetMin", hTargetMin, -9999, 64839
-    params.loc["hTargetMax_1"] = 15, 19673, name, e.water.id, 1, "hTargetMax", hTargetMax, -9999, 64839
+# if manual_add_htargets:
+#     params.loc["hTargetMin_1"] = 14, 19673, name, e.water.id, 1, "hTargetMin", hTargetMin, -9999, 64839
+#     params.loc["hTargetMax_1"] = 15, 19673, name, e.water.id, 1, "hTargetMax", hTargetMax, -9999, 64839
 
 # Simulate
 e.simulate(params=params, tmin=tmin, tmax=tmax)
