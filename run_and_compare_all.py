@@ -23,7 +23,8 @@ excelfiles = ['2130-EAG-2', '2140-EAG-3', '2140-EAG-6', '2250-EAG-2', '2500-EAG-
               '3050-EAG-1', '3050-EAG-2', '3110-EAG-1', '3110-EAG-3', '3200-EAG-2',
               '3201-EAG-1', '3201-EAG-2', '3201-EAG-3', '3230-EAG-1', '3230-EAG-2',
               '3230-EAG-3', '3230-EAG-4', '3230-EAG-5', '3260-EAG-1', '3301-EAG-1',
-              '3301-EAG-2', '3303-EAG-1', '3360-EAG-1']
+              '3301-EAG-2', '3303-EAG-1', '3360-EAG-1' ]
+
 
 for name in excelfiles:
     starttime = pd.datetime.now()

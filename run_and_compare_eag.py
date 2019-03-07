@@ -120,6 +120,11 @@ excelseries = pd.read_pickle(os.path.join(exceldir, "{}_series.pklz".format(name
 valid_index = excelseries.index.dropna()
 excelseries = excelseries.loc[valid_index]
 
+# Sometimes one of the columns in excel series is not float. Convert those columns manually
+for icol in excelseries:
+    if excelseries[icol].dtype == "O":
+        excelseries[icol] = pd.to_numeric(excelseries[icol], errors="coerce")
+
 tmin = pd.Timestamp(tmin)
 tmax = np.min([pd.Timestamp(tmax), excelseries.index[-1]])  # pick earliest tmax to avoid FutureWarnings about KeyErrors
 
