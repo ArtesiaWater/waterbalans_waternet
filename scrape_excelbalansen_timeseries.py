@@ -20,11 +20,11 @@ log = open("scraper.log", "w")
 for f in tqdm.tqdm(excelfiles):
 # for f in excelfiles:
     # if not "EAG" in f:
-    if not "GAF" in f:
-        continue
+    # if not "GAF" in f:
+    #     continue
     
     # # temporary mask
-    # if not f.startswith("3260-EAG-1"):
+    # if not f.startswith("3200-EAG-2"):
     #     continue
     try:
         # print("Processing {} ...".format(f))
@@ -40,7 +40,8 @@ for f in tqdm.tqdm(excelfiles):
         wbalance.set_index("datetime", inplace=True)
         wbalance = wbalance.loc[wbalance.index.dropna()]
         wbalance.drop(columns=[icol for icol in wbalance.columns if icol.startswith("Unnamed:")], inplace=True)
-        wbalance.drop(columns=[ic for ic in wbalance.columns if str(ic).startswith("0")], inplace=True)
+        
+        # wbalance.drop(columns=[ic for ic in wbalance.columns if str(ic).startswith("0")], inplace=True)
 
         series.rename(columns={'Unnamed: 0': "datetime"}, inplace=True)
         series.set_index("datetime", inplace=True)
