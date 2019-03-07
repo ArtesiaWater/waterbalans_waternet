@@ -105,12 +105,6 @@ for name in excelfiles:
     reeksen = pd.read_csv(os.path.join(csvdir, freeks), delimiter=";",
                         decimal=",")
 
-    # # DELETE FOR OTHER EAGs
-    # if e.name == "2500-EAG-6":
-    #     reeksen.loc[0, "Waarde"] = 6000.
-    #     reeksen.loc[1, "Waarde"] = 0.
-    #     e.buckets[16353].parameters.loc["hInit_1", "Waarde"] = 0.45
-
     # add default series
     e.add_series(reeksen, tmin=tmin, tmax=tmax)
 
@@ -118,6 +112,11 @@ for name in excelfiles:
     excelseries = pd.read_pickle(os.path.join(exceldir, "{}_series.pklz".format(name)), compression="zip")
     valid_index = excelseries.index.dropna()
     excelseries = excelseries.loc[valid_index]
+
+    # Sometimes one of the columns in excel series is not float. Convert those columns manually
+    for icol in excelseries:
+        if excelseries[icol].dtype == "O":
+            excelseries[icol] = pd.to_numeric(excelseries[icol], errors="coerce")
 
     tmin = pd.Timestamp(tmin)
     tmax = np.min([pd.Timestamp(tmax), excelseries.index[-1]])  # pick earliest tmax to avoid FutureWarnings about KeyErrors
@@ -227,10 +226,14 @@ for name in excelfiles:
         newline.name += 1
         params.append(newline)
 
-    # Add missing hTargetMin and hTargetMax to params
-    # if manual_add_htargets:
-    #     params.loc["hTargetMin_1"] = 14, 19673, name, e.water.id, 1, "hTargetMin", hTargetMin, -9999, 64839
-    #     params.loc["hTargetMax_1"] = 15, 19673, name, e.water.id, 1, "hTargetMax", hTargetMax, -9999, 64839
+        # Add q_cso series to EAG, will only be used for MengRiool bucket
+        colmask = [True if icol.startswith("gemengd gerioleerd") else False for icol in columns]
+        csoseries = excelseries.loc[:, colmask]
+        e.add_eag_series(csoseries, name="q_cso", tmin=tmin, tmax=tmax, fillna=True, method=0.0)
+
+        # Set MengRiool bucket to use eag_series and not pre-calculated one
+        b = e.get_bucket(buckettype="MengRiool")
+        b[0].use_eag_cso_series = True
 
     # Simulate
     e.simulate(params=params, tmin=tmin, tmax=tmax)

@@ -23,7 +23,7 @@ starttime = pd.datetime.now()
 ##########################################
 # User options
 
-name = "3201-EAG-2"  # which EAG to run
+name = "3050-EAG-1"  # which EAG to run
 
 use_excel_PE = True  # overwrite FEWS precipitation and evaporation with series from Excel file
 add_missing_series = True  # True if you want to add missing series from Excel balance, specify exact names below
@@ -105,12 +105,6 @@ e = wb.create_eag(eag_id, name, buckets, use_waterlevel_series=use_waterlevel_se
 # Lees de tijdreeksen in
 reeksen = pd.read_csv(os.path.join(csvdir, freeks), delimiter=";",
                       decimal=",")
-
-# # DELETE FOR OTHER EAGs
-# if e.name == "2500-EAG-6":
-#     reeksen.loc[0, "Waarde"] = 6000.
-#     reeksen.loc[1, "Waarde"] = 0.
-#     e.buckets[16353].parameters.loc["hInit_1", "Waarde"] = 0.45
 
 # add default series
 e.add_series(reeksen, tmin=tmin, tmax=tmax)
@@ -233,10 +227,14 @@ if "MengRiool" in buckets.BakjePyCode.values:
     newline.name += 1
     params.append(newline)
 
-# Add missing hTargetMin and hTargetMax to params
-# if manual_add_htargets:
-#     params.loc["hTargetMin_1"] = 14, 19673, name, e.water.id, 1, "hTargetMin", hTargetMin, -9999, 64839
-#     params.loc["hTargetMax_1"] = 15, 19673, name, e.water.id, 1, "hTargetMax", hTargetMax, -9999, 64839
+    # Add q_cso series to EAG, will only be used for MengRiool bucket
+    colmask = [True if icol.startswith("gemengd gerioleerd") else False for icol in columns]
+    csoseries = excelseries.loc[:, colmask]
+    e.add_eag_series(csoseries, name="q_cso", tmin=tmin, tmax=tmax, fillna=True, method=0.0)
+
+    # Set MengRiool bucket to use eag_series and not pre-calculated one
+    b = e.get_bucket(buckettype="MengRiool")
+    b[0].use_eag_cso_series = True
 
 # Simulate
 e.simulate(params=params, tmin=tmin, tmax=tmax)
