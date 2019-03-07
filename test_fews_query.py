@@ -19,12 +19,19 @@ query.startTime(tmin)
 query.endTime(tmax)
 df = pi.getTimeSeries(query, setFormat='df')
 
+# Lijst met filters (wat dat ook mogen zijn)
+filters = pi.getFilters()
+
+ts = pi.getTimeSeriesForFilter2(filterId=filters.meteo_meetstation_KNMI.id,
+                                locationIds=np.array([locationId], dtype=str), 
+                                parameterIds=np.array([parameterId], dtype=str), 
+                                startTime=tmin,
+                                endTime=tmax, 
+                                setFormat="df")
+
 #%% Test pi capabilities
 # Lijst met locaties ophalen
 locations  = pi.getLocations(setFormat="gdf")
-
-# Lijst met filters (wat dat ook mogen zijn)
-filters = pi.getFilters()
 
 # Lijst met parameters
 parameters = pi.getParameters()
