@@ -1,4 +1,5 @@
-#%%
+# %%
+import warnings
 """
 
 Dit script bevat de automatische simulatie van waterbalansen op
@@ -10,7 +11,7 @@ per EAG gebruikt:
 - Parameters
 
 """
-#%%
+# %%
 import os
 import sys
 
@@ -25,7 +26,6 @@ import waterbalans as wb
 
 pd.options.mode.chained_assignment = 'raise'
 
-import warnings
 warnings.filterwarnings(action='error', category=FutureWarning)
 # warnings.filterwarnings(action='error', message="SettingWithCopyWarning")
 warnings.filterwarnings(action='error', message="warning:")
@@ -34,7 +34,7 @@ warnings.filterwarnings(action='error', message="warning:")
 mpl.interactive(True)
 
 # Set database url connection
-wb.pi.setClient(wsdl='http://localhost:8081/FewsPiService/fewspiservice?wsdl')
+# wb.pi.setClient(wsdl='http://localhost:8081/FewsPiService/fewspiservice?wsdl')
 
 # Get all files
 csvdir = r"C:/Users/dbrak/Documents/01-Projects/17026004_WATERNET_Waterbalansen/03data/DataExport_frompython2"
@@ -65,13 +65,13 @@ for i, (fbuckets, fparams, freeks) in file_df.iterrows():
         buckets["OppWaarde"] = pd.to_numeric(buckets.OppWaarde)
         name = i
         eag_id = i.split("-")[-1]
-        
+
         # Aanmaken van modelstructuur en de bakjes.
         e = wb.create_eag(eag_id, name, buckets)
 
         # Lees de tijdreeksen in
         reeksen = pd.read_csv(os.path.join(csvdir, freeks), delimiter=";",
-                            decimal=",")
+                              decimal=",")
         if i == "3200-EAG-2":  # hard-coded drop of (seemingly empty) series
             reeksen.drop(0, inplace=True)
         e.add_series(reeksen)
@@ -81,19 +81,21 @@ for i, (fbuckets, fparams, freeks) in file_df.iterrows():
                              decimal=",")
         params.rename(columns={"ParamCode": "Code"}, inplace=True)
         params["Waarde"] = pd.to_numeric(params.Waarde)
-        
+
         # Add missing data manually for MengRiool
         if "MengRiool" in buckets.BakjePyCode.values:
             try:
-                enam = reeksen.loc[reeksen.ClusterType == "Verdamping", "WaardeAlfa"].iloc[0]
+                enam = reeksen.loc[reeksen.ClusterType ==
+                                   "Verdamping", "WaardeAlfa"].iloc[0]
                 enam = enam.split("|")[1]
                 if "66002" in enam:
                     stn = 240  # Schiphol
                 elif "66003" in enam:
                     stn = 260  # De Bilt
-                
-                BakjeID_mengriool = buckets.loc[buckets.BakjePyCode == "MengRiool", "BakjeID"].iloc[0]
-                
+
+                BakjeID_mengriool = buckets.loc[buckets.BakjePyCode ==
+                                                "MengRiool", "BakjeID"].iloc[0]
+
                 # knmi station
                 newline = params.iloc[-1].copy()
                 newline.loc["BakjeID"] = BakjeID_mengriool
@@ -101,7 +103,7 @@ for i, (fbuckets, fparams, freeks) in file_df.iterrows():
                 newline.loc["Waarde"] = stn
                 newline.name += 1
                 params.append(newline)
-                
+
                 # Bmax
                 newline = params.iloc[-1].copy()
                 newline.loc["BakjeID"] = BakjeID_mengriool
@@ -117,16 +119,16 @@ for i, (fbuckets, fparams, freeks) in file_df.iterrows():
                 newline.loc["Waarde"] = 0.5e-3
                 newline.name += 1
                 params.append(newline)
-        
+
             except IndexError as ex:
-                print("Failed running {} because: '{}: {}'".format(i, type(ex).__name__, "Verdamping is missing."), 
-                    file=f)
+                print("Failed running {} because: '{}: {}'".format(i, type(ex).__name__, "Verdamping is missing."),
+                      file=f)
                 # raise(ex)
                 # continue
 
         # Simulate
         e.simulate(params=params, tmin=tmin, tmax=tmax)
-        
+
         b = e.water.validate()
         print(e.name, "Water balance closed: ", b, file=f)
 
@@ -141,15 +143,16 @@ for i, (fbuckets, fparams, freeks) in file_df.iterrows():
         # Calculate and plot the chloride concentration
         # params_cl = params.loc[params.Code == "ClInit", :]
         # C = e.calculate_chloride_concentration(params=params_cl)
-        
+
         # ax2 = e.plot.chloride(C, tmin=tminp, tmax=tmax)
         ax3 = e.plot.chloride_fractions(tmin=tminp, tmax=tmax)
-        
+
         ax4 = e.plot.gemaal(tmin=tminp, tmax=tmax)
-        ax5 = e.plot.gemaal_cumsum(tmin=tminp, tmax=tmax, period="month", inlaat=True)
+        ax5 = e.plot.gemaal_cumsum(
+            tmin=tminp, tmax=tmax, period="month", inlaat=True)
 
     except Exception as ex:
-        print("Failed running {} because: '{}: {}'".format(i, type(ex).__name__, ex), 
+        print("Failed running {} because: '{}: {}'".format(i, type(ex).__name__, ex),
               file=f)
         raise(ex)
 
