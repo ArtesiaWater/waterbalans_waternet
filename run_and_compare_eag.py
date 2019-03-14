@@ -80,8 +80,8 @@ except NameError:
 # wb.pi.setClient(wsdl='http://localhost:8081/FewsPiService/fewspiservice?wsdl')
 
 # Get all files
-# unzip_changed_files("./data/input_csv.zip", "./data/input_csv",
-#                     check_time=True, check_size=True, debug=True)
+unzip_changed_files("./data/input_csv.zip", "./data/input_csv",
+                    check_time=True, check_size=True, debug=True)
 csvdir = r"./data/input_csv"
 files = [i for i in os.listdir(csvdir) if i.endswith(".csv")]
 eag_df = pd.DataFrame(data=files, columns=["filenames"])
@@ -108,7 +108,7 @@ e = wb.create_eag(eag_id, name, buckets,
 
 # Lees de tijdreeksen in
 reeksen = pd.read_csv(os.path.join(csvdir, freeks), delimiter=";",
-                      decimal=",")
+                      decimal=".")
 
 # add default series
 e.add_series(reeksen, tmin=tmin, tmax=tmax)
@@ -141,7 +141,7 @@ if add_missing_series:
     gemaal_series = excelseries.loc[:, colmask]
     gemaal_series = gemaal_series.dropna(how="all", axis=1)
     gemaal = gemaal_series.sum(axis=1)
-    e.add_eag_series(gemaal, name="Gemaal", tmin=tmin, tmax=tmax,
+    e.add_timeseries(gemaal, name="Gemaal", tmin=tmin, tmax=tmax,
                      fillna=True, method=0.0)
 
     # Inlaat
@@ -156,7 +156,7 @@ if add_missing_series:
         if not "Inlaat{}".format(jcol+1) in column_names.keys():
             column_names.update(
                 {"Inlaat{}".format(jcol+1): inlaat_series.columns[jcol]})
-        e.add_eag_series(inlaat_series.iloc[:, jcol], name="Inlaat{}".format(jcol+1),
+        e.add_timeseries(inlaat_series.iloc[:, jcol], name="Inlaat{}".format(jcol+1),
                          tmin=tmin, tmax=tmax, fillna=True, method=0.0)
 
     # Uitlaat
@@ -170,14 +170,14 @@ if add_missing_series:
         if not "Uitlaat{}".format(jcol+1) in column_names.keys():
             column_names.update(
                 {"Uitlaat{}".format(jcol+1): uitlaat_series.columns[jcol]})
-        e.add_eag_series(-1*uitlaat_series.iloc[:, jcol], name="Uitlaat{}".format(jcol+1),
+        e.add_timeseries(uitlaat_series.iloc[:, jcol], name="Uitlaat{}".format(jcol+1),
                          tmin=tmin, tmax=tmax, fillna=True, method=0.0)
 
     # Peil
     colmask = [True if icol.lower().startswith(
         "peil") else False for icol in columns]
     peil = excelseries.loc[:, colmask]
-    e.add_eag_series(peil, name="Peil", tmin=tmin, tmax=tmax,
+    e.add_timeseries(peil, name="Peil", tmin=tmin, tmax=tmax,
                      fillna=True, method="ffill")
 
 # Overwrite FEWS Neerslag/Verdamping with Excel series
@@ -198,6 +198,11 @@ params = pd.read_csv(os.path.join(csvdir, fparams), delimiter=";",
                      decimal=",")
 params.rename(columns={"ParamCode": "Code"}, inplace=True)
 params["Waarde"] = pd.to_numeric(params.Waarde)
+
+# Set QOutMax to 0. Seemingly unused by excelbalances!
+if "QInMax" in params.Code.values:
+    print("Warning! Setting QInMax to 0.0. Not used by Excel.")
+    params.loc[params.Code == "QInMax", "Waarde"] = 0.0
 
 # Add missing data manually for MengRiool
 if "MengRiool" in buckets.BakjePyCode.values:
@@ -247,7 +252,7 @@ if "MengRiool" in buckets.BakjePyCode.values:
     colmask = [True if icol.startswith(
         "gemengd gerioleerd") else False for icol in columns]
     csoseries = excelseries.loc[:, colmask] / 100**2  # series is in m3/d/ha
-    e.add_eag_series(csoseries, name="q_cso", tmin=tmin,
+    e.add_timeseries(csoseries, name="q_cso", tmin=tmin,
                      tmax=tmax, fillna=True, method=0.0)
 
     # Set MengRiool bucket to use eag_series and not pre-calculated one
