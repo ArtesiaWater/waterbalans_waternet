@@ -10,7 +10,7 @@ import shutil
 from pandas.core.common import SettingWithCopyWarning
 import waterbalans as wb
 from util import unzip_changed_files
-mpl.interactive(True)
+# mpl.interactive(True)
 
 # Set warnings to error
 pd.options.mode.chained_assignment = 'raise'
@@ -25,8 +25,14 @@ excelfiles = ['2130-EAG-2', '2140-EAG-3', '2140-EAG-6', '2250-EAG-2', '2500-EAG-
               '3230-EAG-3', '3230-EAG-4', '3230-EAG-5', '3260-EAG-1', '3301-EAG-1',
               '3301-EAG-2', '3303-EAG-1', '3360-EAG-1']
 
+gafs = ['2010-GAF', '2110-GAF', '2100-GAF', '2120-GAF', '2130-GAF', '2140-GAF', 
+        '2150-GAF', '2210-GAF', '2220-GAF', '2230-GAF', '2240-GAF', '2250-GAF', 
+        '2270-GAF', '2280-GAF', '2290-GAF', '2300-GAF', '2310-GAF', '2330-GAF', 
+        '2340-GAF', '2400-GAF', '2410-GAF', '2500-GAF', '2502-GAF', '2503-GAF', 
+        '2504-GAF', '2520-GAF', '2530-GAF', '2540-GAF', '2560-GAF']
 
-for name in excelfiles:
+for name in excelfiles + gafs:
+# for name in gafs:
     starttime = pd.datetime.now()
 
     ##########################################
@@ -62,18 +68,6 @@ for name in excelfiles:
     else:
         outputdir = os.path.join("./comparison", name)
 
-    # copy script to outputdir for reproducibility
-    try:
-        os.remove(os.path.join(outputdir, os.path.basename(__file__)))
-    except (FileNotFoundError, NameError):
-        pass
-    try:
-        shutil.copy(__file__, outputdir)
-    except NameError:
-        __file__ = r"./run_and_compare_eag.py"
-        os.remove(os.path.join(outputdir, os.path.basename(__file__)))
-        shutil.copy(__file__, outputdir)
-
     # %%
     # Set database url connection
     # wb.pi.setClient(wsdl='http://localhost:8081/FewsPiService/fewspiservice?wsdl')
@@ -89,7 +83,7 @@ for name in excelfiles:
     eag_df["type"] = eag_df.filenames.apply(lambda s: s.split("_")[0])
     eag_df.drop_duplicates(subset=["ID", "type"], keep="last", inplace=True)
     file_df = eag_df.pivot(index="ID", columns="type", values="filenames")
-    file_df.dropna(how="any", axis=0, inplace=True)
+    file_df.dropna(how="any", subset=["opp", "param", "reeks"], axis=0, inplace=True)
 
     # Excel directory
     unzip_changed_files("./data/excel_pklz.zip", "./data/excel_pklz", check_time=True,
@@ -106,6 +100,9 @@ for name in excelfiles:
     # Aanmaken van modelstructuur en de bakjes.
     e = wb.create_eag(eag_id, name, buckets,
                       use_waterlevel_series=use_waterlevel_series)
+    if e.water is None:
+        print("Warning!", name, "is missing Water bucket in csv!")
+        continue
 
     # Lees de tijdreeksen in
     reeksen = pd.read_csv(os.path.join(csvdir, freeks), delimiter=";",
@@ -143,7 +140,7 @@ for name in excelfiles:
         gemaal_series = excelseries.loc[:, colmask]
         gemaal_series = gemaal_series.dropna(how="all", axis=1)
         gemaal = gemaal_series.sum(axis=1)
-        e.add_eag_series(gemaal, name="Gemaal", tmin=tmin, tmax=tmax,
+        e.add_timeseries(gemaal, name="Gemaal", tmin=tmin, tmax=tmax,
                          fillna=True, method=0.0)
 
         # Inlaat
@@ -158,7 +155,7 @@ for name in excelfiles:
             if not "Inlaat{}".format(jcol+1) in column_names.keys():
                 column_names.update(
                     {"Inlaat{}".format(jcol+1): inlaat_series.columns[jcol]})
-            e.add_eag_series(inlaat_series.iloc[:, jcol], name="Inlaat{}".format(jcol+1),
+            e.add_timeseries(inlaat_series.iloc[:, jcol], name="Inlaat{}".format(jcol+1),
                              tmin=tmin, tmax=tmax, fillna=True, method=0.0)
 
         # Uitlaat
@@ -172,14 +169,14 @@ for name in excelfiles:
             if not "Uitlaat{}".format(jcol+1) in column_names.keys():
                 column_names.update(
                     {"Uitlaat{}".format(jcol+1): uitlaat_series.columns[jcol]})
-            e.add_eag_series(-1*uitlaat_series.iloc[:, jcol], name="Uitlaat{}".format(jcol+1),
+            e.add_timeseries(-1*uitlaat_series.iloc[:, jcol], name="Uitlaat{}".format(jcol+1),
                              tmin=tmin, tmax=tmax, fillna=True, method=0.0)
 
         # Peil
         colmask = [True if icol.lower().startswith(
             "peil") else False for icol in columns]
         peil = excelseries.loc[:, colmask]
-        e.add_eag_series(peil, name="Peil", tmin=tmin, tmax=tmax,
+        e.add_timeseries(peil, name="Peil", tmin=tmin, tmax=tmax,
                          fillna=True, method="ffill")
 
     # Overwrite FEWS Neerslag/Verdamping with Excel series
@@ -200,6 +197,11 @@ for name in excelfiles:
                          decimal=",")
     params.rename(columns={"ParamCode": "Code"}, inplace=True)
     params["Waarde"] = pd.to_numeric(params.Waarde)
+
+    # Set QOutMax to 0. Seemingly unused by excelbalances!
+    if "QInMax" in params.Code.values:
+        print("Warning! Setting QInMax to 0.0. Not used by Excel.")
+        params.loc[params.Code == "QInMax", "Waarde"] = 0.0
 
     # Add missing data manually for MengRiool
     if "MengRiool" in buckets.BakjePyCode.values:
@@ -250,11 +252,11 @@ for name in excelfiles:
             "gemengd gerioleerd") else False for icol in columns]
         csoseries = excelseries.loc[:, colmask] / \
             100**2  # original series is in m3/d/ha
-        e.add_eag_series(csoseries, name="q_cso", tmin=tmin,
+        e.add_timeseries(csoseries, name="q_cso", tmin=tmin,
                          tmax=tmax, fillna=True, method=0.0)
 
         # Set MengRiool bucket to use eag_series and not pre-calculated one
-        b = e.get_bucket(buckettype="MengRiool")
+        b = e.get_buckets(buckettype="MengRiool")
         b[0].use_eag_cso_series = True
 
     # Simulate
@@ -368,10 +370,10 @@ for name in excelfiles:
             fig.savefig(os.path.join(outputdir, "comparison_fluxes_excel_python.png"), dpi=150,
                         bbox_inches="tight")
 
-        ax = e.plot.compare_waterlevel_to_excel(excelbalance)
-        if savefig:
-            ax.figure.savefig(os.path.join(outputdir, "line_waterlevel_comparison_excel.png"), dpi=150,
-                              bbox_inches="tight")
+        # ax = e.plot.compare_waterlevel_to_excel(excelbalance)
+        # if savefig:
+        #     ax.figure.savefig(os.path.join(outputdir, "line_waterlevel_comparison_excel.png"), dpi=150,
+        #                       bbox_inches="tight")
 
         print("Time elapsed excel comparison: {0:.1f} seconds".format(
             (pd.datetime.now() - postruntime).total_seconds()))
