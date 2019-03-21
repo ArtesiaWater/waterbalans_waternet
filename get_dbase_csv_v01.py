@@ -5,14 +5,13 @@ import pyodbc
 import pandas as pd
 import os
 
-# outdir = (r"e:\balansen\DB\DataOutput")
-outdir = (r"C:\Users\dbrak\Documents\01-Projects\17026004_WATERNET_Waterbalansen\03data\DataExport_20190307")
+outdir = (r"C:\Users\dbrak\Documents\01-Projects\17026004_WATERNET_Waterbalansen"
+          r"\03data\DataExport_frompython2")
 
 # %% Set up database connection
-connStr = (
-    "DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};"
-    "DBQ=C:\\Users\\dbrak\\Documents\\01-Projects\\17026004_WATERNET_Waterbalansen\\03data\\Waterstoffenbalans.accdb;"
-    )
+connStr = (r"DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};"
+           r"DBQ=c:\Users\dbrak\Documents\01-Projects\17026004_WATERNET_Waterbalansen"
+           r"\03data\balansen_20190314\DB\Waterstoffenbalans2.accdb;")
 cnxn = pyodbc.connect(connStr)
 cur = cnxn.cursor()
 
