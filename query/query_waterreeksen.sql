@@ -44,5 +44,5 @@ GROUP BY ws.Id,
        iif(bp.Code like '%Onder', 2, 1),
        bp.PythonCode,
        bpw.waarde 
-ORDER BY WS.Code ) AS T 
+ORDER BY WS.Code )          AS T 
  WHERE T.EAGID = 1210
