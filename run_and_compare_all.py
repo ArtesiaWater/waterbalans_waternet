@@ -25,14 +25,14 @@ excelfiles = ['2130-EAG-2', '2140-EAG-3', '2140-EAG-6', '2250-EAG-2', '2500-EAG-
               '3230-EAG-3', '3230-EAG-4', '3230-EAG-5', '3260-EAG-1', '3301-EAG-1',
               '3301-EAG-2', '3303-EAG-1', '3360-EAG-1']
 
-gafs = ['2010-GAF', '2110-GAF', '2100-GAF', '2120-GAF', '2130-GAF', '2140-GAF', 
-        '2150-GAF', '2210-GAF', '2220-GAF', '2230-GAF', '2240-GAF', '2250-GAF', 
-        '2270-GAF', '2280-GAF', '2290-GAF', '2300-GAF', '2310-GAF', '2330-GAF', 
-        '2340-GAF', '2400-GAF', '2410-GAF', '2500-GAF', '2502-GAF', '2503-GAF', 
+gafs = ['2010-GAF', '2110-GAF', '2100-GAF', '2120-GAF', '2130-GAF', '2140-GAF',
+        '2150-GAF', '2210-GAF', '2220-GAF', '2230-GAF', '2240-GAF', '2250-GAF',
+        '2270-GAF', '2280-GAF', '2290-GAF', '2300-GAF', '2310-GAF', '2330-GAF',
+        '2340-GAF', '2400-GAF', '2410-GAF', '2500-GAF', '2502-GAF', '2503-GAF',
         '2504-GAF', '2520-GAF', '2530-GAF', '2540-GAF', '2560-GAF']
 
 for name in excelfiles + gafs:
-# for name in gafs:
+    # for name in gafs:
     starttime = pd.datetime.now()
 
     ##########################################
@@ -83,7 +83,8 @@ for name in excelfiles + gafs:
     eag_df["type"] = eag_df.filenames.apply(lambda s: s.split("_")[0])
     eag_df.drop_duplicates(subset=["ID", "type"], keep="last", inplace=True)
     file_df = eag_df.pivot(index="ID", columns="type", values="filenames")
-    file_df.dropna(how="any", subset=["opp", "param", "reeks"], axis=0, inplace=True)
+    file_df.dropna(how="any", subset=[
+                   "opp", "param", "reeks"], axis=0, inplace=True)
 
     # Excel directory
     unzip_changed_files("./data/excel_pklz.zip", "./data/excel_pklz", check_time=True,
@@ -169,7 +170,7 @@ for name in excelfiles + gafs:
             if not "Uitlaat{}".format(jcol+1) in column_names.keys():
                 column_names.update(
                     {"Uitlaat{}".format(jcol+1): uitlaat_series.columns[jcol]})
-            e.add_timeseries(-1*uitlaat_series.iloc[:, jcol], name="Uitlaat{}".format(jcol+1),
+            e.add_timeseries(uitlaat_series.iloc[:, jcol], name="Uitlaat{}".format(jcol+1),
                              tmin=tmin, tmax=tmax, fillna=True, method=0.0)
 
         # Peil

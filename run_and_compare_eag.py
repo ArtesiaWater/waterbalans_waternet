@@ -23,7 +23,7 @@ starttime = pd.datetime.now()
 ##########################################
 # User options
 
-name = "2140-EAG-3"  # which EAG to run
+name = "2140-EAG-6"  # which EAG to run
 
 # overwrite FEWS precipitation and evaporation with series from Excel file
 use_excel_PE = True
@@ -80,8 +80,8 @@ except NameError:
 # wb.pi.setClient(wsdl='http://localhost:8081/FewsPiService/fewspiservice?wsdl')
 
 # Get all files
-unzip_changed_files("./data/input_csv.zip", "./data/input_csv",
-                    check_time=True, check_size=True, debug=True)
+# unzip_changed_files("./data/input_csv.zip", "./data/input_csv",
+#                     check_time=True, check_size=True, debug=True)
 csvdir = r"./data/input_csv"
 files = [i for i in os.listdir(csvdir) if i.endswith(".csv")]
 eag_df = pd.DataFrame(data=files, columns=["filenames"])
@@ -141,8 +141,9 @@ if add_missing_series:
     gemaal_series = excelseries.loc[:, colmask]
     gemaal_series = gemaal_series.dropna(how="all", axis=1)
     gemaal = gemaal_series.sum(axis=1)
-    e.add_timeseries(gemaal, name="Gemaal", tmin=tmin, tmax=tmax,
-                     fillna=True, method=0.0)
+    if gemaal.sum() != 0.0:
+        e.add_timeseries(gemaal, name="Gemaal", tmin=tmin, tmax=tmax,
+                         fillna=True, method=0.0)
 
     # Inlaat
     colmask = [True if icol.startswith(
@@ -156,8 +157,9 @@ if add_missing_series:
         if not "Inlaat{}".format(jcol+1) in column_names.keys():
             column_names.update(
                 {"Inlaat{}".format(jcol+1): inlaat_series.columns[jcol]})
-        e.add_timeseries(inlaat_series.iloc[:, jcol], name="Inlaat{}".format(jcol+1),
-                         tmin=tmin, tmax=tmax, fillna=True, method=0.0)
+        if inlaat_series.iloc[:, jcol].sum() != 0.0:
+            e.add_timeseries(inlaat_series.iloc[:, jcol], name="Inlaat{}".format(jcol+1),
+                             tmin=tmin, tmax=tmax, fillna=True, method=0.0)
 
     # Uitlaat
     colmask = [True if icol.startswith(
@@ -170,8 +172,9 @@ if add_missing_series:
         if not "Uitlaat{}".format(jcol+1) in column_names.keys():
             column_names.update(
                 {"Uitlaat{}".format(jcol+1): uitlaat_series.columns[jcol]})
-        e.add_timeseries(uitlaat_series.iloc[:, jcol], name="Uitlaat{}".format(jcol+1),
-                         tmin=tmin, tmax=tmax, fillna=True, method=0.0)
+        if uitlaat_series.iloc[:, jcol].sum() != 0.0:
+            e.add_timeseries(uitlaat_series.iloc[:, jcol], name="Uitlaat{}".format(jcol+1),
+                             tmin=tmin, tmax=tmax, fillna=True, method=0.0)
 
     # Peil
     colmask = [True if icol.lower().startswith(
