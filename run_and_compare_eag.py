@@ -23,15 +23,12 @@ starttime = pd.datetime.now()
 ##########################################
 # User options
 
-name = "2140-EAG-6"  # which EAG to run
+name = "3201-EAG-1"  # which EAG to run
 
 # overwrite FEWS precipitation and evaporation with series from Excel file
 use_excel_PE = True
 # True if you want to add missing series from Excel balance, specify exact names below
 add_missing_series = True
-# whether or not to simulate using the waterlevel series
-use_waterlevel_series = False
-
 # add KNMI series for prec/evap to comparison between FEWS/Excel
 plot_knmi_comparison = False
 
@@ -80,8 +77,8 @@ except NameError:
 # wb.pi.setClient(wsdl='http://localhost:8081/FewsPiService/fewspiservice?wsdl')
 
 # Get all files
-# unzip_changed_files("./data/input_csv.zip", "./data/input_csv",
-#                     check_time=True, check_size=True, debug=True)
+unzip_changed_files("./data/input_csv.zip", "./data/input_csv",
+                    check_time=True, check_size=True, debug=True)
 csvdir = r"./data/input_csv"
 files = [i for i in os.listdir(csvdir) if i.endswith(".csv")]
 eag_df = pd.DataFrame(data=files, columns=["filenames"])
@@ -101,6 +98,17 @@ fbuckets, fparams, freeks, _ = file_df.loc[name]
 buckets = pd.read_csv(os.path.join(csvdir, fbuckets), delimiter=";")
 buckets["OppWaarde"] = pd.to_numeric(buckets.OppWaarde)
 eag_id = name.split("-")[-1]
+
+# Simuleer de waterbalans
+params = pd.read_csv(os.path.join(csvdir, fparams), delimiter=";",
+                     decimal=",")
+params.rename(columns={"ParamCode": "Code"}, inplace=True)
+params["Waarde"] = pd.to_numeric(params.Waarde)
+
+if "hTargetMin" in params.Code.values:
+    use_waterlevel_series = True
+else:
+    use_waterlevel_series = False
 
 # Aanmaken van modelstructuur en de bakjes.
 e = wb.create_eag(eag_id, name, buckets,
@@ -196,12 +204,6 @@ if use_excel_PE:
         e.series.loc[e.series.loc[tmin:tmax].index, "Verdamping"] = excelseries.loc[e.series.loc[tmin:tmax].index,
                                                                                     excelseries.columns[1]].fillna(0.0) * 1e-3
 
-# Simuleer de waterbalans
-params = pd.read_csv(os.path.join(csvdir, fparams), delimiter=";",
-                     decimal=",")
-params.rename(columns={"ParamCode": "Code"}, inplace=True)
-params["Waarde"] = pd.to_numeric(params.Waarde)
-
 # Set QOutMax to 0. Seemingly unused by excelbalances!
 if "QInMax" in params.Code.values:
     print("Warning! Setting QInMax to 0.0. Not used by Excel.")
@@ -223,44 +225,44 @@ if "MengRiool" in buckets.BakjePyCode.values:
         stn = 240  # Schiphol
     elif "66003" in enam:
         stn = 260  # De Bilt
+    
+    # Set MengRiool bucket to use eag_series and not pre-calculated one
+    b = e.get_buckets(buckettype="MengRiool")
+    
+    for j in range(len(b)):
+        b[j].use_eag_cso_series = True
+        BakjeID_mengriool = b[j].id
 
-    BakjeID_mengriool = buckets.loc[buckets.BakjePyCode ==
-                                    "MengRiool", "BakjeID"].iloc[0]
+        # knmi station
+        newline = params.iloc[-1].copy()
+        newline.loc["BakjeID"] = BakjeID_mengriool
+        newline.loc["Code"] = "KNMIStation"
+        newline.loc["Waarde"] = stn
+        newline.name += 1
+        params.append(newline)
 
-    # knmi station
-    newline = params.iloc[-1].copy()
-    newline.loc["BakjeID"] = BakjeID_mengriool
-    newline.loc["Code"] = "KNMIStation"
-    newline.loc["Waarde"] = stn
-    newline.name += 1
-    params.append(newline)
+        # Bmax
+        newline = params.iloc[-1].copy()
+        newline.loc["BakjeID"] = BakjeID_mengriool
+        newline.loc["Code"] = "Bmax"
+        newline.loc["Waarde"] = 5e-3
+        newline.name += 1
+        params.append(newline)
 
-    # Bmax
-    newline = params.iloc[-1].copy()
-    newline.loc["BakjeID"] = BakjeID_mengriool
-    newline.loc["Code"] = "Bmax"
-    newline.loc["Waarde"] = 5e-3
-    newline.name += 1
-    params.append(newline)
+        # POCmax
+        newline = params.iloc[-1].copy()
+        newline.loc["BakjeID"] = BakjeID_mengriool
+        newline.loc["Code"] = "POCmax"
+        newline.loc["Waarde"] = 0.5e-3
+        newline.name += 1
+        params.append(newline)
 
-    # POCmax
-    newline = params.iloc[-1].copy()
-    newline.loc["BakjeID"] = BakjeID_mengriool
-    newline.loc["Code"] = "POCmax"
-    newline.loc["Waarde"] = 0.5e-3
-    newline.name += 1
-    params.append(newline)
-
-    # Add q_cso series to EAG, will only be used for MengRiool bucket
+    # Add q_cso series to EAG, will only be used for MengRiool bucket(s)
     colmask = [True if icol.startswith(
         "gemengd gerioleerd") else False for icol in columns]
     csoseries = excelseries.loc[:, colmask] / 100**2  # series is in m3/d/ha
     e.add_timeseries(csoseries, name="q_cso", tmin=tmin,
                      tmax=tmax, fillna=True, method=0.0)
-
-    # Set MengRiool bucket to use eag_series and not pre-calculated one
-    b = e.get_buckets(buckettype="MengRiool")
-    b[0].use_eag_cso_series = True
 
 # Simulate
 e.simulate(params=params, tmin=tmin, tmax=tmax)

@@ -25,7 +25,7 @@ for f in tqdm.tqdm(excelfiles):
     #     continue
 
     # # temporary mask
-    # if not f.startswith("3200-EAG-2"):
+    # if not f.startswith("2100-GAF"):
     #     continue
     try:
         # print("Processing {} ...".format(f))
