@@ -12,7 +12,7 @@ excelfiles = [i for i in os.listdir(
 cols1 = "A:F"
 rows1 = [14, 34]
 nrows1 = rows1[1] - rows1[0]
-cols2 = "A:R"
+cols2 = "A:U"
 rows2 = [75, ]
 sheetname = "uitgangspunten"
 
@@ -30,13 +30,19 @@ for f in tqdm.tqdm(excelfiles):
     try:
         # print("Processing {} ...".format(f))
         xls = pd.ExcelFile(os.path.join(exceldir, f))
+        
+        # read stofconcentraties table
         table = pd.read_excel(xls, skiprows=rows1[0], header=[0], index=[0],
                               usecols=cols1, sheet_name=sheetname, nrows=nrows1)
+        # read timeseries water quantity (and three at the end for chloride)
         series = pd.read_excel(xls, skiprows=rows2[0], header=[0], index=[0],
                                usecols=cols2, sheet_name=sheetname)
-
+        # read Chloride and Phosphate etc.
+        series_stoffen = pd.read_excel(xls, skiprows=rows2[0], header=[0], index=None,
+                                       usecols="W:AH,AJ:AK", sheet_name=sheetname)
+        # read water balance from REKENHART sheet
         wbalance = pd.read_excel(xls, skiprows=10, header=[0],
-                                 index=None, usecols="A,AJ,CH:DB", sheet_name="REKENHART")
+                                 index=None, usecols="A,AJ,CH:DB", sheet_name="REKENHART")                                 
         wbalance.drop(index=wbalance.iloc[:2].index, inplace=True)
         wbalance.rename(columns={'post': "datetime"}, inplace=True)
         wbalance.set_index("datetime", inplace=True)
@@ -54,6 +60,9 @@ for f in tqdm.tqdm(excelfiles):
                                      "_table.pklz"), compression="zip")
         series.to_pickle(os.path.join(exceldir, name +
                                       "_series.pklz"), compression="zip")
+        series_stoffen.to_pickle(os.path.join(exceldir, name +
+                                              "_series_stoffen.pklz"), 
+                                              compression="zip")
         wbalance.to_pickle(os.path.join(
             exceldir, name + "_wbalance.pklz"), compression="zip")
 
