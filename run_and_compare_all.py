@@ -10,6 +10,8 @@ import shutil
 from pandas.core.common import SettingWithCopyWarning
 import waterbalans as wb
 from util import unzip_changed_files
+from tqdm import tqdm
+import zipfile
 # mpl.interactive(True)
 
 # Set warnings to error
@@ -31,8 +33,9 @@ gafs = ['2010-GAF', '2110-GAF', '2100-GAF', '2120-GAF', '2130-GAF', '2140-GAF',
         '2340-GAF', '2400-GAF', '2410-GAF', '2500-GAF', '2502-GAF', '2503-GAF',
         '2504-GAF', '2520-GAF', '2530-GAF', '2540-GAF', '2560-GAF']
 
-for name in excelfiles + gafs:
+for name in tqdm(excelfiles + gafs, desc="Simulating balances", ncols=0):
     # for name in gafs:
+    print()
     starttime = pd.datetime.now()
 
     ##########################################
@@ -42,8 +45,6 @@ for name in excelfiles + gafs:
     use_excel_PE = True
     # True if you want to add missing series from Excel balance, specify exact names below
     add_missing_series = True
-    # whether or not to simulate using the waterlevel series
-    use_waterlevel_series = False
 
     # add KNMI series for prec/evap to comparison between FEWS/Excel
     plot_knmi_comparison = False
@@ -52,9 +53,10 @@ for name in excelfiles + gafs:
     tminp = "1996"  # tmin for in plots, can be different from simulation tmin
     tmax = "2016-11-30"  # end simulation time for Python
 
-    savefig = True  # save figures to outputdir
+    savefig = False  # save figures to outputdir
     do_postproc = False  # create all figures
-    excel_compare = True  # compare output to Excel
+    excel_compare = False  # compare output to Excel
+    save_output = True  # save calculated csvs to zipfile
 
     ##########################################
 
@@ -98,16 +100,28 @@ for name in excelfiles + gafs:
     buckets["OppWaarde"] = pd.to_numeric(buckets.OppWaarde)
     eag_id = name.split("-")[-1]
 
+    # Simuleer de waterbalans
+    params = pd.read_csv(os.path.join(csvdir, fparams), delimiter=";",
+                         decimal=",")
+    params.rename(columns={"ParamCode": "Code"}, inplace=True)
+    params["Waarde"] = pd.to_numeric(params.Waarde)
+
+    if "hTargetMin" in params.Code.values:
+        use_waterlevel_series = True
+    else:
+        use_waterlevel_series = False
+
     # Aanmaken van modelstructuur en de bakjes.
     e = wb.create_eag(eag_id, name, buckets,
                       use_waterlevel_series=use_waterlevel_series)
+
     if e.water is None:
         print("Warning!", name, "is missing Water bucket in csv!")
         continue
 
     # Lees de tijdreeksen in
     reeksen = pd.read_csv(os.path.join(csvdir, freeks), delimiter=";",
-                          decimal=",")
+                          decimal=".")
 
     # add default series
     e.add_series(reeksen, tmin=tmin, tmax=tmax)
@@ -141,8 +155,9 @@ for name in excelfiles + gafs:
         gemaal_series = excelseries.loc[:, colmask]
         gemaal_series = gemaal_series.dropna(how="all", axis=1)
         gemaal = gemaal_series.sum(axis=1)
-        e.add_timeseries(gemaal, name="Gemaal", tmin=tmin, tmax=tmax,
-                         fillna=True, method=0.0)
+        if gemaal.sum() != 0.0:
+            e.add_timeseries(gemaal, name="Gemaal", tmin=tmin, tmax=tmax,
+                             fillna=True, method=0.0)
 
         # Inlaat
         colmask = [True if icol.startswith(
@@ -156,8 +171,9 @@ for name in excelfiles + gafs:
             if not "Inlaat{}".format(jcol+1) in column_names.keys():
                 column_names.update(
                     {"Inlaat{}".format(jcol+1): inlaat_series.columns[jcol]})
-            e.add_timeseries(inlaat_series.iloc[:, jcol], name="Inlaat{}".format(jcol+1),
-                             tmin=tmin, tmax=tmax, fillna=True, method=0.0)
+            if inlaat_series.iloc[:, jcol].sum() != 0.0:
+                e.add_timeseries(inlaat_series.iloc[:, jcol], name="Inlaat{}".format(jcol+1),
+                                 tmin=tmin, tmax=tmax, fillna=True, method=0.0)
 
         # Uitlaat
         colmask = [True if icol.startswith(
@@ -170,8 +186,9 @@ for name in excelfiles + gafs:
             if not "Uitlaat{}".format(jcol+1) in column_names.keys():
                 column_names.update(
                     {"Uitlaat{}".format(jcol+1): uitlaat_series.columns[jcol]})
-            e.add_timeseries(uitlaat_series.iloc[:, jcol], name="Uitlaat{}".format(jcol+1),
-                             tmin=tmin, tmax=tmax, fillna=True, method=0.0)
+            if uitlaat_series.iloc[:, jcol].sum() != 0.0:
+                e.add_timeseries(uitlaat_series.iloc[:, jcol], name="Uitlaat{}".format(jcol+1),
+                                 tmin=tmin, tmax=tmax, fillna=True, method=0.0)
 
         # Peil
         colmask = [True if icol.lower().startswith(
@@ -192,12 +209,6 @@ for name in excelfiles + gafs:
                                                                                       excelseries.columns[0]].fillna(0.0) * 1e-3
             e.series.loc[e.series.loc[tmin:tmax].index, "Verdamping"] = excelseries.loc[e.series.loc[tmin:tmax].index,
                                                                                         excelseries.columns[1]].fillna(0.0) * 1e-3
-
-    # Simuleer de waterbalans
-    params = pd.read_csv(os.path.join(csvdir, fparams), delimiter=";",
-                         decimal=",")
-    params.rename(columns={"ParamCode": "Code"}, inplace=True)
-    params["Waarde"] = pd.to_numeric(params.Waarde)
 
     # Set QOutMax to 0. Seemingly unused by excelbalances!
     if "QInMax" in params.Code.values:
@@ -221,32 +232,36 @@ for name in excelfiles + gafs:
         elif "66003" in enam:
             stn = 260  # De Bilt
 
-        BakjeID_mengriool = buckets.loc[buckets.BakjePyCode ==
-                                        "MengRiool", "BakjeID"].iloc[0]
+        # Set MengRiool bucket to use eag_series and not pre-calculated one
+        b = e.get_buckets(buckettype="MengRiool")
 
-        # knmi station
-        newline = params.iloc[-1].copy()
-        newline.loc["BakjeID"] = BakjeID_mengriool
-        newline.loc["Code"] = "KNMIStation"
-        newline.loc["Waarde"] = stn
-        newline.name += 1
-        params.append(newline)
+        for j in range(len(b)):
+            b[j].use_eag_cso_series = True
+            BakjeID_mengriool = b[j].id
 
-        # Bmax
-        newline = params.iloc[-1].copy()
-        newline.loc["BakjeID"] = BakjeID_mengriool
-        newline.loc["Code"] = "Bmax"
-        newline.loc["Waarde"] = 5e-3
-        newline.name += 1
-        params.append(newline)
+            # knmi station
+            newline = params.iloc[-1].copy()
+            newline.loc["BakjeID"] = BakjeID_mengriool
+            newline.loc["Code"] = "KNMIStation"
+            newline.loc["Waarde"] = stn
+            newline.name += 1
+            params.append(newline)
 
-        # POCmax
-        newline = params.iloc[-1].copy()
-        newline.loc["BakjeID"] = BakjeID_mengriool
-        newline.loc["Code"] = "POCmax"
-        newline.loc["Waarde"] = 0.5e-3
-        newline.name += 1
-        params.append(newline)
+            # Bmax
+            newline = params.iloc[-1].copy()
+            newline.loc["BakjeID"] = BakjeID_mengriool
+            newline.loc["Code"] = "Bmax"
+            newline.loc["Waarde"] = 5e-3
+            newline.name += 1
+            params.append(newline)
+
+            # POCmax
+            newline = params.iloc[-1].copy()
+            newline.loc["BakjeID"] = BakjeID_mengriool
+            newline.loc["Code"] = "POCmax"
+            newline.loc["Waarde"] = 0.5e-3
+            newline.name += 1
+            params.append(newline)
 
         # Add q_cso series to EAG, will only be used for MengRiool bucket
         colmask = [True if icol.startswith(
@@ -256,10 +271,6 @@ for name in excelfiles + gafs:
         e.add_timeseries(csoseries, name="q_cso", tmin=tmin,
                          tmax=tmax, fillna=True, method=0.0)
 
-        # Set MengRiool bucket to use eag_series and not pre-calculated one
-        b = e.get_buckets(buckettype="MengRiool")
-        b[0].use_eag_cso_series = True
-
     # Simulate
     e.simulate(params=params, tmin=tmin, tmax=tmax)
 
@@ -267,8 +278,8 @@ for name in excelfiles + gafs:
     print(e.name, "Water balance closed: ", b)
 
     postruntime = pd.datetime.now()
-    print("Time elapsed simulate: {0:.1f} s".format(
-        (postruntime - starttime).total_seconds()))
+    # print("Time elapsed simulate: {0:.1f} s".format(
+    #     (postruntime - starttime).total_seconds()))
 
     if do_postproc:
 
@@ -352,8 +363,9 @@ for name in excelfiles + gafs:
 
     postproctime = pd.datetime.now()
     if do_postproc:
-        print("Time elapsed postproc: {0:.1f} seconds".format(
-            (postproctime - postruntime).total_seconds()))
+        # print("Time elapsed postproc: {0:.1f} seconds".format(
+        #     (postproctime - postruntime).total_seconds()))
+        pass
 
     if excel_compare:
         # %% Compare to Excel
@@ -376,8 +388,37 @@ for name in excelfiles + gafs:
         #     ax.figure.savefig(os.path.join(outputdir, "line_waterlevel_comparison_excel.png"), dpi=150,
         #                       bbox_inches="tight")
 
-        print("Time elapsed excel comparison: {0:.1f} seconds".format(
-            (pd.datetime.now() - postruntime).total_seconds()))
+        # print("Time elapsed excel comparison: {0:.1f} seconds".format(
+        #     (pd.datetime.now() - postruntime).total_seconds()))
 
     if savefig:
         plt.close("all")
+
+    if save_output:
+        
+        fluxes = e.aggregate_fluxes()
+        
+        eagseries_names = None
+        if "Gemaal" in e.series.columns:
+            eagseries_names = ["Gemaal"]
+            fluxes_w_ps = e.aggregate_with_pumpstation()
+        
+        # Calculate and plot the chloride concentration
+        params_cl = params.loc[params.Code == "ClInit", :]
+        chloride = e.calculate_chloride_concentration(params=params_cl)
+        
+        cumsum = e.cumulative_period_sum(eagseries_names=eagseries_names)
+
+        fractions = e.calculate_fractions()
+
+        with zipfile.ZipFile(os.path.join("./output", e.name + '.zip'), 
+                             'w', zipfile.ZIP_DEFLATED) as zipf:
+            zipf.writestr("{}_fluxes.csv".format(e.name), fluxes.to_csv())
+            if "Gemaal" in e.series.columns:
+                zipf.writestr("{}_fluxes_w_ps.csv".format(e.name), fluxes_w_ps.to_csv())
+                for nam, iseries in zip(["inuitflux", "gemaal"], cumsum):
+                    zipf.writestr("{}_{}_cumsum.csv".format(e.name, nam), iseries.to_csv())
+            else:
+                zipf.writestr("{}_inuitflux_cumsum.csv".format(e.name), cumsum.to_csv())
+            zipf.writestr("{}_chloride.csv".format(e.name), chloride.to_csv(header="chloride"))
+            zipf.writestr("{}_fractions.csv".format(e.name), fractions.to_csv())
