@@ -23,7 +23,7 @@ starttime = pd.datetime.now()
 ##########################################
 # User options
 
-name = "3201-EAG-1"  # which EAG to run
+name = "2140-EAG-3"  # which EAG to run
 
 # overwrite FEWS precipitation and evaporation with series from Excel file
 use_excel_PE = True
@@ -86,7 +86,8 @@ eag_df["ID"] = eag_df.filenames.apply(lambda s: s.split("_")[2].split(".")[0])
 eag_df["type"] = eag_df.filenames.apply(lambda s: s.split("_")[0])
 eag_df.drop_duplicates(subset=["ID", "type"], keep="last", inplace=True)
 file_df = eag_df.pivot(index="ID", columns="type", values="filenames")
-file_df.dropna(how="any", axis=0, inplace=True)
+file_df.dropna(how="any", subset=[
+               "opp", "param", "reeks"], axis=0, inplace=True)
 
 # Excel directory
 unzip_changed_files("./data/excel_pklz.zip", "./data/excel_pklz", check_time=True,
@@ -225,10 +226,10 @@ if "MengRiool" in buckets.BakjePyCode.values:
         stn = 240  # Schiphol
     elif "66003" in enam:
         stn = 260  # De Bilt
-    
+
     # Set MengRiool bucket to use eag_series and not pre-calculated one
     b = e.get_buckets(buckettype="MengRiool")
-    
+
     for j in range(len(b)):
         b[j].use_eag_cso_series = True
         BakjeID_mengriool = b[j].id
