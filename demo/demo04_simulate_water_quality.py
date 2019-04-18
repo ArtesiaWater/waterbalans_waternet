@@ -1,6 +1,6 @@
-""" DEMO 04: Calculate Phosphate concentration
+""" DEMO 04: Calculate phosphor concentration
 
-Minimal example that calculates the phosphate concentration
+Minimal example that calculates the phosphor concentration
 for a water balance.
 
 Author: D.A. Brakenhoff
@@ -33,22 +33,29 @@ tmax = "2015"
 # bestand met deelgebieden en oppervlaktes:
 deelgebieden = pd.read_csv(
     r"../data/input_csv/opp_1207_2140-EAG-3.csv", delimiter=";")
+
 # bestand met tijdreeksen, b.v. neerslag/verdamping:
 tijdreeksen = pd.read_csv(
     r"../data/input_csv/reeks_1207_2140-EAG-3.csv", delimiter=";")
+dropmask = (tijdreeksen.ParamType == "FEWS") | (tijdreeksen.ParamType == "KNMI") | \
+            (tijdreeksen.ParamType == "Local")
+tijdreeksen.drop(tijdreeksen.loc[dropmask].index, inplace=True)
+
 # bestand met parameters per deelgebied
 parameters = pd.read_csv(
     r"../data/input_csv/param_1207_2140-EAG-3.csv", delimiter=";")
+
 # bestand met overige tijdreeksen
 series = pd.read_csv(
     r"../data/input_csv/series_1207_2140-EAG-3.csv", delimiter=";", 
     index_col=[1], parse_dates=True)
+
 # bestand met concentraties van stof per flux
-fosfaat = pd.read_csv(
+fosfor = pd.read_csv(
     r"..\data\input_csv\stoffen_fosfor_1207_2140-EAG-3.csv", delimiter=";",
         decimal=",")
-fosfaat.columns = [icol.capitalize() for icol in fosfaat.columns]
-fosfaat.replace("Riolering", "q_cso", inplace=True)
+fosfor.columns = [icol.capitalize() for icol in fosfor.columns]
+fosfor.replace("Riolering", "q_cso", inplace=True)
 
 # %% Model
 # --------
@@ -65,17 +72,23 @@ wb.add_timeseries_to_obj(e, series)
 e.simulate(parameters, tmin=tmin, tmax=tmax)
 
 # Simuleer de waterkwaliteit
-C_fosfaat = e.simulate_wq(fosfaat)
-C_fosfaat_max = e.simulate_wq(fosfaat, increment=True)
+mass_in, mass_out, mass_fosfor = e.simulate_wq(fosfor)
+mass_in_max, mass_out_max, mass_fosfor_max = e.simulate_wq(fosfor, increment=True)
+
+# Bereken de concentratie
+C_fosfor = mass_fosfor / e.water.storage["storage"]
+C_fosfor_max = mass_fosfor_max / e.water.storage["storage"]
 
 # %% Visualisatie
 # ---------------
 fig, ax = plt.subplots(1, 1, figsize=(12, 6), dpi=150)
-ax.plot(C_fosfaat.index, C_fosfaat, label="Fosfaat concentratie")
-ax.plot(C_fosfaat.index, C_fosfaat_max, label="Maximale fosfaat concentratie")
+ax.plot(C_fosfor.index, C_fosfor, label="Fosfor concentratie")
+ax.plot(C_fosfor_max.index, C_fosfor_max, label="Maximale fosfor concentratie")
 ax.legend(loc="best")
 ax.set_ylabel("Concentratie (mgP/l)")
 ax.grid(b=True)
 fig.tight_layout()
+
+ax = e.plot.wq_loading(mass_in, mass_out)
 
 print("Elapsed time: {0:.1f} seconds".format((pd.datetime.now() - starttijd).total_seconds()))
