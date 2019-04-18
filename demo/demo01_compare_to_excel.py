@@ -45,8 +45,7 @@ series = pd.read_csv(
 
 # Edit input files to match excel
 parameters.loc[parameters.ParamCode == "QInMax", "Waarde"] = 0.0
-dropmask = (tijdreeksen.ParamType == "FEWS") | (tijdreeksen.ParamType == "KNMI") | \
-            (tijdreeksen.ParamType == "Local")
+dropmask = (tijdreeksen.ParamType == "FEWS") | (tijdreeksen.ParamType == "KNMI") | (tijdreeksen.ParamType == "Local")
 tijdreeksen.drop(tijdreeksen.loc[dropmask].index, inplace=True)
 
 
