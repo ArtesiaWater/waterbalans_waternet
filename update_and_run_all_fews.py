@@ -37,7 +37,7 @@ file_df = file_df.loc[first+last]
 wb_dict = {}
 
 # for name in tqdm.tqdm(file_df.index, desc="Waterbalansen", ncols=0):
-for name in ["2010-GAF", "2140-EAG-6", "2500-EAG-6"]:
+for name in ["2110-GAF"]:
     print()
     # Get CSV files
     fbuckets, fparams, freeks, fseries, fcl, ffos = file_df.loc[name]
@@ -86,6 +86,7 @@ for name in ["2010-GAF", "2140-EAG-6", "2500-EAG-6"]:
     if len(mengriool) > 0:
         for b in mengriool:
             b.use_eag_cso_series = False
+            b.path_to_cso_series = r"./data/cso_series/240_cso_timeseries.pklz"
 
     # Voeg tijdreeksen uit andere EAGs toe
     if e.name in eag_koppeltabel.index:
