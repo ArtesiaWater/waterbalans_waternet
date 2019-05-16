@@ -124,7 +124,7 @@ for name in tqdm(excelfiles + gafs, desc="Simulating balances", ncols=0):
                           decimal=".")
 
     # add default series
-    e.add_series(reeksen, tmin=tmin, tmax=tmax)
+    e.add_series_from_database(reeksen, tmin=tmin, tmax=tmax)
 
     # read missing series 'reeks' and add as inflow to EAG
     excelseries = pd.read_pickle(os.path.join(
@@ -395,23 +395,23 @@ for name in tqdm(excelfiles + gafs, desc="Simulating balances", ncols=0):
         plt.close("all")
 
     if save_output:
-        
+
         fluxes = e.aggregate_fluxes()
-        
+
         eagseries_names = None
         if "Gemaal" in e.series.columns:
             eagseries_names = ["Gemaal"]
             fluxes_w_ps = e.aggregate_with_pumpstation()
-        
+
         # Calculate and plot the chloride concentration
         params_cl = params.loc[params.Code == "ClInit", :]
         chloride = e.calculate_chloride_concentration(params=params_cl)
-        
+
         cumsum = e.cumulative_period_sum(eagseries_names=eagseries_names)
 
         fractions = e.calculate_fractions()
 
-        with zipfile.ZipFile(os.path.join("./output", e.name + '.zip'), 
+        with zipfile.ZipFile(os.path.join("./output", e.name + '.zip'),
                              'w', zipfile.ZIP_DEFLATED) as zipf:
             zipf.writestr("{}_fluxes.csv".format(e.name), fluxes.to_csv())
             if "Gemaal" in e.series.columns:

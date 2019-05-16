@@ -23,7 +23,7 @@ starttime = pd.datetime.now()
 ##########################################
 # User options
 
-name = "2140-EAG-3"  # which EAG to run
+name = "2500-EAG-6"  # which EAG to run
 
 # overwrite FEWS precipitation and evaporation with series from Excel file
 use_excel_PE = True
@@ -77,17 +77,10 @@ except NameError:
 # wb.pi.setClient(wsdl='http://localhost:8081/FewsPiService/fewspiservice?wsdl')
 
 # Get all files
-unzip_changed_files("./data/input_csv.zip", "./data/input_csv",
-                    check_time=True, check_size=True, debug=True)
+# unzip_changed_files("./data/input_csv.zip", "./data/input_csv",
+#                     check_time=True, check_size=True, debug=True)
 csvdir = r"./data/input_csv"
-files = [i for i in os.listdir(csvdir) if i.endswith(".csv")]
-eag_df = pd.DataFrame(data=files, columns=["filenames"])
-eag_df["ID"] = eag_df.filenames.apply(lambda s: s.split("_")[2].split(".")[0])
-eag_df["type"] = eag_df.filenames.apply(lambda s: s.split("_")[0])
-eag_df.drop_duplicates(subset=["ID", "type"], keep="last", inplace=True)
-file_df = eag_df.pivot(index="ID", columns="type", values="filenames")
-file_df.dropna(how="any", subset=[
-               "opp", "param", "reeks"], axis=0, inplace=True)
+file_df = wb.utils.create_csvfile_table(csvdir)
 
 # Excel directory
 unzip_changed_files("./data/excel_pklz.zip", "./data/excel_pklz", check_time=True,
@@ -95,7 +88,7 @@ unzip_changed_files("./data/excel_pklz.zip", "./data/excel_pklz", check_time=Tru
 exceldir = r"./data/excel_pklz"
 
 # Get CSV files
-fbuckets, fparams, freeks, _ = file_df.loc[name]
+fbuckets, fparams, freeks, fseries, fcl, ffos = file_df.loc[name]
 buckets = pd.read_csv(os.path.join(csvdir, fbuckets), delimiter=";")
 buckets["OppWaarde"] = pd.to_numeric(buckets.OppWaarde)
 eag_id = name.split("-")[-1]
@@ -103,10 +96,16 @@ eag_id = name.split("-")[-1]
 # Simuleer de waterbalans
 params = pd.read_csv(os.path.join(csvdir, fparams), delimiter=";",
                      decimal=",")
-params.rename(columns={"ParamCode": "Code"}, inplace=True)
+
+# params.rename(columns={"ParamCode": "Code"}, inplace=True)
 params["Waarde"] = pd.to_numeric(params.Waarde)
 
-if "hTargetMin" in params.Code.values:
+if name == "2500-EAG-6":
+    params.loc[params.ParamCode == "hTargetMin", "Waarde"] = 0.05
+    params.loc[params.ParamCode == "hTargetMax", "Waarde"] = 0.05
+
+if params.loc[params.ParamCode == "hTargetMin", "Waarde"].iloc[0] != -9999.:
+    # if "hTargetMin" in params.ParamCode.values:
     use_waterlevel_series = True
 else:
     use_waterlevel_series = False
@@ -120,7 +119,7 @@ reeksen = pd.read_csv(os.path.join(csvdir, freeks), delimiter=";",
                       decimal=".")
 
 # add default series
-e.add_series(reeksen, tmin=tmin, tmax=tmax)
+e.add_series_from_database(reeksen, tmin=tmin, tmax=tmax)
 
 # read missing series 'reeks' and add as inflow to EAG
 excelseries = pd.read_pickle(os.path.join(
@@ -138,59 +137,8 @@ tmin = pd.Timestamp(tmin)
 tmax = np.min([pd.Timestamp(tmax), excelseries.index[-1]])
 
 if add_missing_series:
-    column_names = {}
-    columns = ["neerslag", "verdamping", "peil",
-               "Gemaal1", "Gemaal2", "Gemaal3", "Gemaal4",
-               "Inlaat voor calibratie", "gemengd gerioleerd stelsel",
-               "Inlaat1", "Inlaat2", "Inlaat3", "Inlaat4",
-               "Uitlaat1", "Uitlaat2", "Uitlaat3", "Uitlaat4"]
-    # Gemaal
-    colmask = [True if icol.startswith(
-        "Gemaal") else False for icol in columns]
-    gemaal_series = excelseries.loc[:, colmask]
-    gemaal_series = gemaal_series.dropna(how="all", axis=1)
-    gemaal = gemaal_series.sum(axis=1)
-    if gemaal.sum() != 0.0:
-        e.add_timeseries(gemaal, name="Gemaal", tmin=tmin, tmax=tmax,
-                         fillna=True, method=0.0)
-
-    # Inlaat
-    colmask = [True if icol.startswith(
-        "Inlaat") else False for icol in columns]
-    inlaat_series = excelseries.loc[:, colmask]
-    inlaat_series = inlaat_series.drop("Inlaat\nvoor calibratie", axis=1)
-    # inlaat_series = inlaat_series.dropna(how="all", axis=1)
-    for jcol in range(inlaat_series.shape[1]):
-        if inlaat_series.iloc[:, jcol].dropna().empty:
-            continue
-        if not "Inlaat{}".format(jcol+1) in column_names.keys():
-            column_names.update(
-                {"Inlaat{}".format(jcol+1): inlaat_series.columns[jcol]})
-        if inlaat_series.iloc[:, jcol].sum() != 0.0:
-            e.add_timeseries(inlaat_series.iloc[:, jcol], name="Inlaat{}".format(jcol+1),
-                             tmin=tmin, tmax=tmax, fillna=True, method=0.0)
-
-    # Uitlaat
-    colmask = [True if icol.startswith(
-        "Uitlaat") else False for icol in columns]
-    uitlaat_series = excelseries.loc[:, colmask]
-    # uitlaat_series = uitlaat_series.dropna(how="all", axis=1)
-    for jcol in range(uitlaat_series.shape[1]):
-        if uitlaat_series.iloc[:, jcol].dropna().empty:
-            continue
-        if not "Uitlaat{}".format(jcol+1) in column_names.keys():
-            column_names.update(
-                {"Uitlaat{}".format(jcol+1): uitlaat_series.columns[jcol]})
-        if uitlaat_series.iloc[:, jcol].sum() != 0.0:
-            e.add_timeseries(uitlaat_series.iloc[:, jcol], name="Uitlaat{}".format(jcol+1),
-                             tmin=tmin, tmax=tmax, fillna=True, method=0.0)
-
-    # Peil
-    colmask = [True if icol.lower().startswith(
-        "peil") else False for icol in columns]
-    peil = excelseries.loc[:, colmask]
-    e.add_timeseries(peil, name="Peil", tmin=tmin, tmax=tmax,
-                     fillna=True, method="ffill")
+    wb.utils.add_timeseries_to_obj(e, excelseries, tmin=tmin, tmax=tmax,
+                                   overwrite=True, data_from_excel=True)
 
 # Overwrite FEWS Neerslag/Verdamping with Excel series
 if use_excel_PE:
@@ -206,9 +154,9 @@ if use_excel_PE:
                                                                                     excelseries.columns[1]].fillna(0.0) * 1e-3
 
 # Set QOutMax to 0. Seemingly unused by excelbalances!
-if "QInMax" in params.Code.values:
+if "QInMax" in params.ParamCode.values:
     print("Warning! Setting QInMax to 0.0. Not used by Excel.")
-    params.loc[params.Code == "QInMax", "Waarde"] = 0.0
+    params.loc[params.ParamCode == "QInMax", "Waarde"] = 0.0
 
 # Add missing data manually for MengRiool
 if "MengRiool" in buckets.BakjePyCode.values:
@@ -229,6 +177,12 @@ if "MengRiool" in buckets.BakjePyCode.values:
 
     # Set MengRiool bucket to use eag_series and not pre-calculated one
     b = e.get_buckets(buckettype="MengRiool")
+
+    columns = ["neerslag", "verdamping", "peil",
+               "Gemaal1", "Gemaal2", "Gemaal3", "Gemaal4",
+               "Inlaat voor calibratie", "gemengd gerioleerd stelsel",
+               "Inlaat1", "Inlaat2", "Inlaat3", "Inlaat4",
+               "Uitlaat1", "Uitlaat2", "Uitlaat3", "Uitlaat4"]
 
     for j in range(len(b)):
         b[j].use_eag_cso_series = True
@@ -307,50 +261,19 @@ if do_postproc:
                           bbox_inches="tight")
 
     # Calculate and plot the chloride concentration
-    params_cl = params.loc[params.Code == "ClInit", :]
-    C = e.calculate_chloride_concentration(params=params_cl)
+    params_cl = pd.read_csv(os.path.join(csvdir, fcl), sep=";", decimal=",")
+    mass_in, mass_out, mass_tot = e.simulate_wq(params_cl)
+    C = mass_tot / e.water.storage["storage"]
 
     # Plot Chloride
     ax = e.plot.chloride(C, tmin=tminp, tmax=tmax)
     if savefig:
         ax.figure.savefig(os.path.join(outputdir, "line_chlorideconc.png"), dpi=150,
                           bbox_inches="tight")
-    ax = e.plot.chloride_fractions(tmin=tmin, tmax=tmax, chloride_conc=C)
+    ax = e.plot.fractions(tmin=tmin, tmax=tmax, chloride_conc=C)
     if savefig:
         ax.figure.savefig(os.path.join(outputdir, "linestack_chloride-fractions.png"), dpi=150,
                           bbox_inches="tight")
-
-if plot_knmi_comparison:
-    # Neerslag + Verdamping
-    fig, (ax0, ax1) = plt.subplots(2, 1, figsize=(16, 7), dpi=150, sharex=True)
-    ax0.plot(excelseries.index, excelseries.iloc[:, 0], label="neerslag Excel")
-    ax0.plot(e.series.Neerslag.index, e.series.Neerslag *
-             1e3, label="neerslag FEWS")
-
-    ax1.plot(excelseries.index,
-             excelseries.iloc[:, 1], label="verdamping Excel")
-    ax1.plot(e.series.Verdamping.index, e.series.Verdamping *
-             1e3, label="verdamping FEWS")
-
-    import pastas as ps
-    # prec
-    prec = ps.read.KnmiStation.download(start=tmin, end=tmax, stns=563,
-                                        vars='RD', interval='daily')
-    ax0.plot(prec.data.index.floor(freq="D") - pd.Timedelta(days=1), prec.data.RD*1e3,
-             label="neerslag KNMI", ls="dashed")
-    # evap
-    evap = ps.read.KnmiStation.download(start=tmin, end=tmax, stns=240,
-                                        vars='EV24', interval='daily')
-    ax1.plot(evap.data.index.floor(freq="D") - pd.Timedelta(days=1), evap.data.EV24*1e3,
-             label="verdamping KNMI", ls="dashed")
-
-    for iax in [ax0, ax1]:
-        iax.grid(b=True)
-        iax.legend(loc="best")
-
-    if savefig:
-        fig.savefig(os.path.join(outputdir, "line_evap-prec-comparison.png"), dpi=150,
-                    bbox_inches="tight")
 
 postproctime = pd.datetime.now()
 if do_postproc:

@@ -103,7 +103,7 @@ reeksen = pd.read_csv(os.path.join(csvdir, freeks), delimiter=";",
                       decimal=",")
 
 # add default series
-e.add_series(reeksen, tmin=tmin, tmax=tmax)
+e.add_series_from_database(reeksen, tmin=tmin, tmax=tmax)
 
 # read missing series 'reeks' and add as inflow to EAG
 excelseries = pd.read_pickle(os.path.join(
