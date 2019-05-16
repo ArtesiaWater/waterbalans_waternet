@@ -6,8 +6,6 @@ import tqdm
 import numpy as np
 import matplotlib as mpl
 import pandas as pd
-from hkvfewspy import FewsTimeSeriesCollection
-from pastas.read import KnmiStation
 
 import waterbalans as wb
 
@@ -109,7 +107,7 @@ for name in ["2010-GAF", "2140-EAG-6", "2500-EAG-6"]:
     # Add balance to dictionary
     wb_dict[e.name] = e
 
-# %% End of script
+# %% Collect information from EAGs and save to file
 # ----------------
 print("Elapsed time: {0:.1f} seconds".format(
     (pd.datetime.now() - starttijd).total_seconds()))
@@ -120,3 +118,12 @@ inlaten = pd.DataFrame(index=pd.date_range("1996-01-01", "2019-01-01", freq="D")
 for name, e in wb_dict.items():
     fluxes = e.aggregate_fluxes()
     inlaten.loc[fluxes.index, name] = fluxes["berekende inlaat"]
+
+inlaat_df = inlaten.stack().reset_index()
+inlaat_df.columns = ["Datetime", "Loc_ID", "Value"]
+inlaat_df["Variable"] = "Inlaat Debiet"
+inlaat_df["Unit"] = "m3/s"
+inlaat_df["Value"] = inlaat_df["Value"] / (24*60*60)
+inlaat_df.sort_values(by=["Loc_ID", "Datetime"], inplace=True)
+
+inlaat_df.to_csv("inlaten_testfile.csv", index=False)
