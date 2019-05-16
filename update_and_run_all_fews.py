@@ -80,11 +80,12 @@ for name in ["2010-GAF", "2140-EAG-6", "2500-EAG-6"]:
     # Voeg overige tijdreeksen toe (overschrijf FEWS met Excel)
     if series is not None:
         wb.add_timeseries_to_obj(e, series, overwrite=True)
-    else:
-        mengriool = e.get_buckets(buckettype="MengRiool")
-        if len(mengriool) > 0:
-            for b in mengriool:
-                b.use_eag_cso_series = False
+
+    # Force MengRiool to use external timeseries
+    mengriool = e.get_buckets(buckettype="MengRiool")
+    if len(mengriool) > 0:
+        for b in mengriool:
+            b.use_eag_cso_series = False
 
     # Voeg tijdreeksen uit andere EAGs toe
     if e.name in eag_koppeltabel.index:
