@@ -3,7 +3,7 @@ import warnings
 """
 
 Dit script bevat de automatische simulatie van waterbalansen op
-EAG-niveau voor alle EAGs. De volgende drie invoerbestanden worden 
+EAG-niveau voor alle EAGs. De volgende drie invoerbestanden worden
 per EAG gebruikt:
 
 - Modelstructuur (opp)
@@ -74,7 +74,7 @@ for i, (fbuckets, fparams, freeks) in file_df.iterrows():
                               decimal=",")
         if i == "3200-EAG-2":  # hard-coded drop of (seemingly empty) series
             reeksen.drop(0, inplace=True)
-        e.add_series(reeksen)
+        e.add_series_from_database(reeksen)
 
         # Simuleer de waterbalans
         params = pd.read_csv(os.path.join(csvdir, fparams), delimiter=";",
