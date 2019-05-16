@@ -60,7 +60,7 @@ if np.any(df.data.index.hour == 1):
 knmi = pd.concat([df.data, df2.data], axis=0, sort=True)
 
 # Eag koppeling
-eag_koppeltabel = pd.read_csv("./data/eag_koppeling.csv", index_col=[0])
+eag_koppeltabel = pd.read_csv("./data/eag_koppeling.txt", index_col=[0])
 # Sorteer EAGs zodat afhankelijke EAGs als laatste komen
 last, first = [], []
 for i in file_df.index:

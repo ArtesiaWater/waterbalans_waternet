@@ -25,7 +25,7 @@ tmin = "1996"
 tmax = "2019"
 
 # Eag koppeling
-eag_koppeltabel = pd.read_csv("./data/eag_koppeling.csv", index_col=[0])
+eag_koppeltabel = pd.read_csv("./data/eag_koppeling.txt", index_col=[0])
 # Sorteer EAGs zodat afhankelijke EAGs als laatste komen
 last, first = [], []
 for i in file_df.index:
