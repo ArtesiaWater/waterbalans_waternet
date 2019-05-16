@@ -1,6 +1,6 @@
 """ DEMO 01: Compare waterbalance to original Excel balance
 
-Minimal example that compares a water balance run in Python to 
+Minimal example that compares a water balance run in Python to
 the original data from Excel.
 
 Author: D.A. Brakenhoff
@@ -40,7 +40,7 @@ parameters = pd.read_csv(
     r"../data/input_csv/param_1207_2140-EAG-3.csv", delimiter=";")
 # bestand met overige tijdreeksen
 series = pd.read_csv(
-    r"../data/input_csv/series_1207_2140-EAG-3.csv", delimiter=";", 
+    r"../data/input_csv/series_1207_2140-EAG-3.csv", delimiter=";",
     index_col=[1], parse_dates=True)
 
 # Edit input files to match excel
@@ -55,7 +55,7 @@ tijdreeksen.drop(tijdreeksen.loc[dropmask].index, inplace=True)
 e = wb.create_eag(eag_id, eag_name, deelgebieden)
 
 # Voeg tijdreeksen toe
-e.add_series(tijdreeksen, tmin=tmin, tmax=tmax)
+e.add_series_from_database(tijdreeksen, tmin=tmin, tmax=tmax)
 
 # Voeg overige tijdreeksen toe
 wb.add_timeseries_to_obj(e, series)

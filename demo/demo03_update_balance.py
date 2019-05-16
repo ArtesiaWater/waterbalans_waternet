@@ -39,7 +39,7 @@ parameters = pd.read_csv(
     r"../data/input_csv/param_1207_2140-EAG-3.csv", delimiter=";")
 # bestand met overige tijdreeksen
 series = pd.read_csv(
-    r"../data/input_csv/series_1207_2140-EAG-3.csv", delimiter=";", 
+    r"../data/input_csv/series_1207_2140-EAG-3.csv", delimiter=";",
     index_col=[1], parse_dates=True)
 
 # %% Model
@@ -48,7 +48,7 @@ series = pd.read_csv(
 e = wb.create_eag(eag_id, eag_name, deelgebieden)
 
 # Voeg tijdreeksen toe
-e.add_series(tijdreeksen, tmin=tmin, tmax=tmax)
+e.add_series_from_database(tijdreeksen, tmin=tmin, tmax=tmax)
 
 # Voeg overige tijdreeksen toe
 wb.add_timeseries_to_obj(e, series, overwrite=True)

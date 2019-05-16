@@ -1,6 +1,6 @@
 """ DEMO 02: Run 10 balances and plot output
 
-Minimal example that runs 10 waterbalances either 
+Minimal example that runs 10 waterbalances either
 on EAG or GAF level and plots results.
 
 Author: D.A. Brakenhoff
@@ -42,20 +42,20 @@ for obj_name in tqdm(eag_gaf_ids, desc="Building and simulating", ncols=0):
 
     # Haal csv bestandnamen op
     fbuckets, fparams, freeks, fseries, _, _ = file_df.loc[obj_name]
-    
+
     # %% Inlezen gegevens
-    # -------------------    
+    # -------------------
     # bestand met deelgebieden en oppervlaktes:
     deelgebieden = pd.read_csv(os.path.join(csvdir, fbuckets), delimiter=";")
-    
+
     # bestand met tijdreeksen, b.v. neerslag/verdamping:
     tijdreeksen = pd.read_csv(os.path.join(csvdir, freeks), delimiter=";")
-    
+
     # bestand met parameters per deelgebied
     parameters = pd.read_csv(os.path.join(csvdir, fparams), delimiter=";")
 
     # bestand met overige tijdreeksen
-    series = pd.read_csv(os.path.join(csvdir, fseries), delimiter=";", 
+    series = pd.read_csv(os.path.join(csvdir, fseries), delimiter=";",
                          index_col=[1], parse_dates=True)
 
     # %% Model
@@ -64,7 +64,7 @@ for obj_name in tqdm(eag_gaf_ids, desc="Building and simulating", ncols=0):
     e = wb.create_eag(eag_id, obj_name, deelgebieden)
 
     # Voeg tijdreeksen toe
-    e.add_series(tijdreeksen, tmin=tmin, tmax=tmax)
+    e.add_series_from_database(tijdreeksen, tmin=tmin, tmax=tmax)
 
     # Voeg overige tijdreeksen toe
     wb.add_timeseries_to_obj(e, series)
