@@ -29,6 +29,9 @@ name = "2500-EAG-6"  # which EAG to run
 use_excel_PE = True
 # True if you want to add missing series from Excel balance, specify exact names below
 add_missing_series = True
+# whether or not to simulate using the waterlevel series
+use_waterlevel_series = True
+
 # add KNMI series for prec/evap to comparison between FEWS/Excel
 plot_knmi_comparison = False
 
@@ -113,6 +116,7 @@ else:
 # Aanmaken van modelstructuur en de bakjes.
 e = wb.create_eag(eag_id, name, buckets,
                   use_waterlevel_series=use_waterlevel_series)
+e.plot.dpi = 100
 
 # Lees de tijdreeksen in
 reeksen = pd.read_csv(os.path.join(csvdir, freeks), delimiter=";",
@@ -152,6 +156,12 @@ if use_excel_PE:
                                                                                   excelseries.columns[0]].fillna(0.0) * 1e-3
         e.series.loc[e.series.loc[tmin:tmax].index, "Verdamping"] = excelseries.loc[e.series.loc[tmin:tmax].index,
                                                                                     excelseries.columns[1]].fillna(0.0) * 1e-3
+
+# Simuleer de waterbalans
+params = pd.read_csv(os.path.join(csvdir, fparams), delimiter=";",
+                     decimal=",")
+params.rename(columns={"ParamCode": "Code"}, inplace=True)
+params["Waarde"] = pd.to_numeric(params.Waarde)
 
 # Set QOutMax to 0. Seemingly unused by excelbalances!
 if "QInMax" in params.ParamCode.values:
@@ -218,6 +228,10 @@ if "MengRiool" in buckets.BakjePyCode.values:
     csoseries = excelseries.loc[:, colmask] / 100**2  # series is in m3/d/ha
     e.add_timeseries(csoseries, name="q_cso", tmin=tmin,
                      tmax=tmax, fillna=True, method=0.0)
+
+    # Set MengRiool bucket to use eag_series and not pre-calculated one
+    b = e.get_buckets(buckettype="MengRiool")
+    b[0].use_eag_cso_series = True
 
 # Simulate
 e.simulate(params=params, tmin=tmin, tmax=tmax)
