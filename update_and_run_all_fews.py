@@ -72,7 +72,8 @@ for name in ["2110-GAF"]:
 # --------
     # Maak bakjes model
     e = wb.create_eag(eag_id, eag_name, deelgebieden,
-                      use_waterlevel_series=use_wl)
+                      use_waterlevel_series=use_wl,
+                      logfile="{}.log".format(eag_name))
 
     # Voeg tijdreeksen toe
     e.add_series_from_database(tijdreeksen, tmin=tmin, tmax=tmax)
