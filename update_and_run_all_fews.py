@@ -37,7 +37,8 @@ file_df = file_df.loc[first+last]
 wb_dict = {}
 
 # for name in tqdm.tqdm(file_df.index, desc="Waterbalansen", ncols=0):
-for name in ["2110-GAF"]:
+# for name in ["2010-GAF"]:
+for name in ["2010-GAF","2110-GAF"]:
     print()
     # Get CSV files
     fbuckets, fparams, freeks, fseries, fcl, ffos = file_df.loc[name]
@@ -124,9 +125,14 @@ for name, e in wb_dict.items():
 
 inlaat_df = inlaten.stack().reset_index()
 inlaat_df.columns = ["Datetime", "Loc_ID", "Value"]
-inlaat_df["Variable"] = "Inlaat Debiet"
-inlaat_df["Unit"] = "m3/s"
-inlaat_df["Value"] = inlaat_df["Value"] / (24*60*60)
+inlaat_df["datum"] = inlaat_df['Datetime'].dt.strftime("%d-%m-%y %H:%M")
+inlaat_df["debiet1"] = (inlaat_df["Value"] /(24*60*60)).round(4)
+inlaat_df["Loc_ID"] = inlaat_df["Loc_ID"].str.replace('-GAF', '', regex=True)
+inlaat_df["Loc"] = inlaat_df["Loc_ID"].str.replace('-GAF', '', regex=True)
+inlaat_df["debiet"] = inlaat_df["debiet1"]
+
 inlaat_df.sort_values(by=["Loc_ID", "Datetime"], inplace=True)
+inlaat_df = inlaat_df[["datum","debiet1","Loc_ID","Loc","debiet"]]
 
 inlaat_df.to_csv("inlaten_testfile.csv", index=False)
+
