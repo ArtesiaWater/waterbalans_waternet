@@ -37,8 +37,8 @@ file_df = file_df.loc[first+last]
 wb_dict = {}
 
 # for name in tqdm.tqdm(file_df.index, desc="Waterbalansen", ncols=0):
-# for name in ["2010-GAF"]:
-for name in ["2010-GAF","2110-GAF"]:
+for name in ["2010-GAF"]:
+# for name in ["2010-GAF","2110-GAF"]:
     print()
     # Get CSV files
     fbuckets, fparams, freeks, fseries, fcl, ffos = file_df.loc[name]
