@@ -37,8 +37,8 @@ file_df = file_df.loc[first+last]
 wb_dict = {}
 
 # for name in tqdm.tqdm(file_df.index, desc="Waterbalansen", ncols=0):
-for name in ["2010-GAF"]:
-# for name in ["2010-GAF","2110-GAF"]:
+# for name in ["2010-GAF"]:
+for name in ["2510-EAG-3", "2010-GAF", "2140-EAG-6"]:
     print()
     # Get CSV files
     fbuckets, fparams, freeks, fseries, fcl, ffos = file_df.loc[name]
@@ -74,7 +74,7 @@ for name in ["2010-GAF"]:
     # Maak bakjes model
     e = wb.create_eag(eag_id, eag_name, deelgebieden,
                       use_waterlevel_series=use_wl,
-                      logfile="{}.log".format(eag_name))
+                      logfile="waterbalans.log")
 
     # Voeg tijdreeksen toe
     e.add_series_from_database(tijdreeksen, tmin=tmin, tmax=tmax)
@@ -117,22 +117,25 @@ print("Elapsed time: {0:.1f} seconds".format(
     (pd.datetime.now() - starttijd).total_seconds()))
 
 inlaten = pd.DataFrame(index=pd.date_range("1996-01-01", "2019-01-01", freq="D"),
-                       columns=[e.name for e in wb_dict.values()])
+                       columns=[e.name for e in wb_dict.values()], dtype=np.float)
 
 for name, e in wb_dict.items():
     fluxes = e.aggregate_fluxes()
-    inlaten.loc[fluxes.index, name] = fluxes["berekende inlaat"]
+    # get inlaat columns and add together
+    inlaat_cols = [col for col in fluxes.columns if col.lower().startswith("inlaat")] + \
+        ["berekende inlaat"]
+    inlaten.loc[fluxes.index, name] = fluxes.loc[:, inlaat_cols].sum(axis=1)
 
 inlaat_df = inlaten.stack().reset_index()
-inlaat_df.columns = ["Datetime", "Loc_ID", "Value"]
-inlaat_df["datum"] = inlaat_df['Datetime'].dt.strftime("%d-%m-%y %H:%M")
-inlaat_df["debiet1"] = (inlaat_df["Value"] /(24*60*60)).round(4)
-inlaat_df["Loc_ID"] = inlaat_df["Loc_ID"].str.replace('-GAF', '', regex=True)
-inlaat_df["Loc"] = inlaat_df["Loc_ID"].str.replace('-GAF', '', regex=True)
-inlaat_df["debiet"] = inlaat_df["debiet1"]
+inlaat_df.columns = ["datetime", "loc_ID", "value"]
+# convert to m3/s and round to 4 decimals
+inlaat_df["value"] = (inlaat_df["value"] / (24*60*60)).round(4)
+# remove -GAF from name
+inlaat_df["loc_ID"] = inlaat_df["loc_ID"].str.replace('-GAF', '', regex=True)
+# sort values bij location then date
+inlaat_df.sort_values(by=["loc_ID", "datetime"], inplace=True)
+# convert to different datetime str
+inlaat_df["datetime"] = inlaat_df['datetime'].dt.strftime("%d-%m-%y %H:%M")
 
-inlaat_df.sort_values(by=["Loc_ID", "Datetime"], inplace=True)
-inlaat_df = inlaat_df[["datum","debiet1","Loc_ID","Loc","debiet"]]
-
+# export file
 inlaat_df.to_csv("inlaten_testfile.csv", index=False)
-
