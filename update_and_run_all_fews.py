@@ -31,15 +31,23 @@ for i in file_df.index:
         last.append(i)
     else:
         first.append(i)
-file_df = file_df.loc[first+last]
+
+last_sorted = []
+for i in last:
+    if i in eag_koppeltabel.values:
+        last_sorted.insert(0, i)
+    else:
+        last_sorted.append(i)
+
+file_df = file_df.loc[first+last_sorted]
 
 # %% Start loop
 wb_dict = {}
 
-# for name in tqdm.tqdm(file_df.index, desc="Waterbalansen", ncols=0):
-# for name in ["2010-GAF"]:
-for name in ["2510-EAG-3", "2010-GAF", "2140-EAG-6"]:
-    print()
+for name in tqdm.tqdm(file_df.index, desc="Waterbalansen", ncols=0):
+    # for name in ["2010-GAF"]:
+    # for name in ["2510-EAG-3", "2010-GAF", "2140-EAG-6"]:
+    # print()
     # Get CSV files
     fbuckets, fparams, freeks, fseries, fcl, ffos = file_df.loc[name]
 
