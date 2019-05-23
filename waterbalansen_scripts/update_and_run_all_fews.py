@@ -1,3 +1,12 @@
+"""
+Run all waterbalances with timeseries from FEWS.
+
+Ensure you have access to a Local or Operational FEWS dbase.
+ - For Local FEWS, make sure the Tomcat server is up and running.
+ - For non-local FEWS, update the WSDL URL in the EAG object with
+   `eag.set_wsdl(<your wsdl here>)`
+
+"""
 # %% Import modules
 # -----------------
 import os
@@ -15,7 +24,7 @@ starttijd = pd.datetime.now()
 
 # Basisgegevens
 # -------------
-csvdir = r"./data/input_csv"
+csvdir = "../data/input_csv"
 file_df = wb.utils.create_csvfile_table(csvdir)
 
 # Begin en eindtijd simulatie
@@ -23,7 +32,7 @@ tmin = "1996"
 tmax = "2019"
 
 # Eag koppeling
-eag_koppeltabel = pd.read_csv("./data/eag_koppeling.txt", index_col=[0])
+eag_koppeltabel = pd.read_csv("../data/eag_koppeling.txt", index_col=[0])
 # Sorteer EAGs zodat afhankelijke EAGs als laatste komen
 last, first = [], []
 for i in file_df.index:
@@ -96,7 +105,7 @@ for name in tqdm.tqdm(file_df.index, desc="Waterbalansen", ncols=0):
     if len(mengriool) > 0:
         for b in mengriool:
             b.use_eag_cso_series = False
-            b.path_to_cso_series = r"./data/cso_series/240_cso_timeseries.pklz"
+            b.path_to_cso_series = r"../data/cso_series/240_cso_timeseries.pklz"
 
     # Voeg tijdreeksen uit andere EAGs toe
     if e.name in eag_koppeltabel.index:

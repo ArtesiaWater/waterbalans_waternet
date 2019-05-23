@@ -1,3 +1,5 @@
+from tqdm import tqdm
+import waterbalans as wb
 """ DEMO 02: Run 10 balances and plot output
 
 Minimal example that runs 10 waterbalances either
@@ -13,19 +15,17 @@ import os
 import pandas as pd
 import matplotlib as mpl
 mpl.interactive(True)
-import waterbalans as wb
-from tqdm import tqdm
 
 starttijd = pd.datetime.now()
 
 # Basisgegevens
 # -------------
 # Namen van EAGs/GAFs:
-eag_gaf_ids = ['2130-EAG-2', '2140-EAG-3', '2140-EAG-6', '2250-EAG-2', '2500-EAG-6',
-               '2010-GAF', '2110-GAF', '2100-GAF', '2120-GAF', '2130-GAF',]
+eag_gaf_ids = ['2250-EAG-2', '2130-EAG-2', '2140-EAG-3', '2140-EAG-6', '2500-EAG-6',
+               '2010-GAF', '2110-GAF', '2100-GAF', '2120-GAF', '2130-GAF', ]
 
 # Tabel met alle bestanden per EAG/GAF:
-csvdir = r"../data/input_csv"
+csvdir = r"../../data/input_csv"
 file_df = wb.create_csvfile_table(csvdir)
 
 # Begin en eindtijd simulaties
@@ -56,7 +56,7 @@ for obj_name in tqdm(eag_gaf_ids, desc="Building and simulating", ncols=0):
 
     # bestand met overige tijdreeksen
     series = pd.read_csv(os.path.join(csvdir, fseries), delimiter=";",
-                         index_col=[1], parse_dates=True)
+                         index_col=[0], parse_dates=True)
 
     # %% Model
     # --------
@@ -67,7 +67,7 @@ for obj_name in tqdm(eag_gaf_ids, desc="Building and simulating", ncols=0):
     e.add_series_from_database(tijdreeksen, tmin=tmin, tmax=tmax)
 
     # Voeg overige tijdreeksen toe
-    wb.add_timeseries_to_obj(e, series)
+    wb.add_timeseries_to_obj(e, series, tmin=tmin, tmax=tmax)
 
     # Simuleer waterbalans met parameters
     e.simulate(parameters, tmin=tmin, tmax=tmax)
@@ -76,4 +76,5 @@ for obj_name in tqdm(eag_gaf_ids, desc="Building and simulating", ncols=0):
     wb_list.append(e)
 
 print(wb_list)
-print("Elapsed time: {0:.1f} seconds".format((pd.datetime.now() - starttijd).total_seconds()))
+print("Elapsed time: {0:.1f} seconds".format(
+    (pd.datetime.now() - starttijd).total_seconds()))

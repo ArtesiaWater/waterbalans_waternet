@@ -1,3 +1,13 @@
+"""
+Run all waterbalances with precipitation and evaporation from KNMI.
+
+Ensure you have access to a Local or Operational FEWS dbase for
+getting other series:
+ - For Local FEWS, make sure the Tomcat server is up and running.
+ - For non-local FEWS, update the WSDL URL in the EAG object with
+   `eag.set_wsdl(<your wsdl here>)`
+
+"""
 # %% Import modules
 # -----------------
 import os
@@ -106,14 +116,14 @@ for name in ["2510-EAG-3", "2010-GAF", "2140-EAG-6"]:
     else:
         use_wl = False
 
-    # # replace FEWS with KNMI
+    # # replace FEWS with KNMI in series file (this forces script
+    # # to download for each waterbalance)
     # for p_or_e, col in zip(["Neerslag", "Verdamping"], [2, 1]):
     #     mask = (tijdreeksen.ClusterType == p_or_e) & (
     #         tijdreeksen.ParamType == "FEWS")
     #     tijdreeksen.loc[mask, "ParamType"] = "KNMI"
     #     fewscode = tijdreeksen.loc[mask, "WaardeAlfa"].iloc[0].split("|")[col]
     #     tijdreeksen.loc[mask, "Waarde"] = int(fews2knmi[fewscode])
-
 
 # %% Model
 # --------

@@ -1,3 +1,4 @@
+import waterbalans as wb
 """ DEMO 03: Update waterbalance with data from FEWS
 
 Minimal example that updates a water balance with data from FEWS.
@@ -12,7 +13,6 @@ import os
 import pandas as pd
 import matplotlib as mpl
 mpl.interactive(True)
-import waterbalans as wb
 
 starttijd = pd.datetime.now()
 
@@ -30,17 +30,17 @@ tmax = "2019"
 # -------------------
 # bestand met deelgebieden en oppervlaktes:
 deelgebieden = pd.read_csv(
-    r"../data/input_csv/opp_1207_2140-EAG-3.csv", delimiter=";")
+    r"../../data/input_csv/opp_60_2140-EAG-3.csv", delimiter=";")
 # bestand met tijdreeksen, b.v. neerslag/verdamping:
 tijdreeksen = pd.read_csv(
-    r"../data/input_csv/reeks_1207_2140-EAG-3.csv", delimiter=";")
+    r"../../data/input_csv/reeks_60_2140-EAG-3.csv", delimiter=";")
 # bestand met parameters per deelgebied
 parameters = pd.read_csv(
-    r"../data/input_csv/param_1207_2140-EAG-3.csv", delimiter=";")
+    r"../../data/input_csv/param_60_2140-EAG-3.csv", delimiter=";")
 # bestand met overige tijdreeksen
 series = pd.read_csv(
-    r"../data/input_csv/series_1207_2140-EAG-3.csv", delimiter=";",
-    index_col=[1], parse_dates=True)
+    r"../../data/input_csv/series_60_2140-EAG-3.csv", delimiter=";",
+    index_col=[0], parse_dates=True)
 
 # %% Model
 # --------
@@ -61,4 +61,5 @@ e.simulate(parameters, tmin=tmin, tmax=tmax)
 e.plot.water_level()
 e.plot.aggregated()
 
-print("Elapsed time: {0:.1f} seconds".format((pd.datetime.now() - starttijd).total_seconds()))
+print("Elapsed time: {0:.1f} seconds".format(
+    (pd.datetime.now() - starttijd).total_seconds()))

@@ -1,11 +1,13 @@
-import zipfile
 import os
 import time
+import zipfile
+
 
 def unzip_file(src, dst, force=False, preserve_datetime=False):
     if os.path.exists(dst):
         if not force:
-            print("File not unzipped. Destination already exists. Use 'force=True' to unzip.")
+            print(
+                "File not unzipped. Destination already exists. Use 'force=True' to unzip.")
             return
     if preserve_datetime:
         zipf = zipfile.ZipFile(src, 'r')
@@ -21,33 +23,33 @@ def unzip_file(src, dst, force=False, preserve_datetime=False):
     return 1
 
 
-def unzip_changed_files(zipname,pathname,check_time=True,check_size=False,
+def unzip_changed_files(zipname, pathname, check_time=True, check_size=False,
                         debug=False):
     # Extract each file in a zip-file only when the properties are different
     # With the default arguments this method only checks the modification time
     with zipfile.ZipFile(zipname) as zf:
         infolist = zf.infolist()
         for info in infolist:
-            fname = os.path.join(pathname,info.filename)
-            extract=False
+            fname = os.path.join(pathname, info.filename)
+            extract = False
             if os.path.exists(fname):
                 if check_time:
                     tz = time.mktime(info.date_time + (0, 0, -1))
                     tf = os.path.getmtime(fname)
-                    if tz!=tf:
-                        extract=True
+                    if tz != tf:
+                        extract = True
                 if check_size:
                     sz = info.file_size
                     sf = os.path.getsize(fname)
-                    if sz!=sf:
-                        extract=True
+                    if sz != sf:
+                        extract = True
             else:
-                extract=True
+                extract = True
             if extract:
                 if debug:
                     print('extracting {}'.format(info.filename))
-                zf.extract(info.filename,pathname)
+                zf.extract(info.filename, pathname)
                 # set the correct modification time
                 # (which is the time of extraction by default)
                 tz = time.mktime(info.date_time + (0, 0, -1))
-                os.utime(os.path.join(pathname,info.filename), (tz, tz))
+                os.utime(os.path.join(pathname, info.filename), (tz, tz))
