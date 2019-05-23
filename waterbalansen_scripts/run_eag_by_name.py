@@ -1,8 +1,13 @@
 """
-Script to run an EAG or GAF by name.
+Script to run an EAG or GAF by name. Useful for quickly checking waterbalance
+and comparing to Excel.
 
 If Script fails, please check if data has been
-extracted in data directory by running prepare_input_data.py
+extracted in data directory by running `prepare_input_data.py`.
+
+Note: This script will not add outflow timeseries from other EAGs to
+the current EAG! This script is therefore not suited to calculating
+inflow for "Het Boezem Model". Use `update_and_run_all_fews.py` for that!
 
 """
 
