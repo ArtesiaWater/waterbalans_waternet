@@ -15,6 +15,9 @@
 /jwv_mengriool_script
 /data/input_csv/
 /data/excel_pklz/
+/data/eag_gaf_shp/
 /output/
 
 __pycache__
+
+
