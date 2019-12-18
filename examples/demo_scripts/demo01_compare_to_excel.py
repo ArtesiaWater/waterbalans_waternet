@@ -68,7 +68,8 @@ e.simulate(parameters, tmin=tmin, tmax=tmax)
 # ---------------
 # Inladen resultaten uit Excel balans
 exceldir = r"../../data/excel_pklz"
-excelbalance = pd.read_pickle(os.path.join(exceldir, "{}_wbalance.pklz".format(e.name)),
+excelbalance = pd.read_pickle(os.path.join(exceldir,
+                                           "{}_wbalance.pklz".format(e.name)),
                               compression="zip")
 # Kolommen omzetten naar getallen
 for icol in excelbalance.columns:
