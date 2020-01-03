@@ -127,7 +127,7 @@ for name in tqdm.tqdm(file_df.index, desc="Waterbalansen", ncols=0):
 
         # Simuleer waterbalans met parameters
         e.simulate(parameters, tmin=tmin, tmax=tmax)
-        # e.simulate_iterative(parameters, extra_iter=1,
+        # e.simulate_iterative(parameters, extra_iters=1,
         #                      tmin=tmin, tmax=tmax)
 
         # Add balance to dictionary
