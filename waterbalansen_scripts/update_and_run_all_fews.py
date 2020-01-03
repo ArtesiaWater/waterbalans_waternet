@@ -20,7 +20,7 @@ import waterbalans as wb
 
 mpl.interactive(True)
 
-starttijd = pd.datetime.now()
+starttijd = pd.datetime.today()
 
 # Basisgegevens
 # -------------
@@ -29,7 +29,7 @@ file_df = wb.utils.create_csvfile_table(csvdir)
 
 # Begin en eindtijd simulatie
 tmin = "1996-01-01"
-tmax = "2019-01-01"
+tmax = pd.datetime.now()
 
 # Eag koppeling
 eag_koppeltabel = pd.read_csv("../data/eag_koppeling.txt", index_col=[0])
@@ -166,12 +166,12 @@ inlaat_df["datetime"] = inlaat_df['datetime'].dt.strftime("%d-%m-%y %H:%M")
 # export file
 inlaat_df.to_csv("inlaten_testfile.csv", index=False)
 
-# export aggregated fluxes to csv per EAG/GAF
+# export aggregated fluxes
+all_fluxes = []
 for name, e in wb_dict.items():
     fluxes = e.aggregate_fluxes()
     longform_fluxes = fluxes.reset_index().melt(id_vars="index",
                                                 value_vars=fluxes.columns)
-
     if e.name.endswith("GAF"):
         longform_fluxes["locationId"] = e.name.split("-")[0]
     else:
@@ -179,5 +179,8 @@ for name, e in wb_dict.items():
 
     longform_fluxes.columns = ["datetime", "parameterId",
                                "value", "locationId"]
-    longform_fluxes.to_csv("{0}_aggregated-fluxes.csv", sep=";", index=False,
-                           float_format="%.3f")
+    all_fluxes.append(longform_fluxes)
+
+longform_fluxes = pd.concat(all_fluxes, axis=0)
+longform_fluxes.to_csv("aggregated-fluxes.csv", sep=";", index=False,
+                       float_format="%.3f")
