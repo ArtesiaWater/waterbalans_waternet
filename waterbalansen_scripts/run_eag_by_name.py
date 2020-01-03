@@ -16,7 +16,7 @@ import matplotlib as mpl
 mpl.interactive(True)
 
 # Run eag by name
-e = wb.run_eag_by_name("2010-GAF", csvdir="../data/input_csv", log_level="INFO")
+e = wb.run_eag_by_name("2100-GAF", csvdir="../data/input_csv", log_level="INFO")
 # e.dpi = 150
 
 # Compare eag to Excel

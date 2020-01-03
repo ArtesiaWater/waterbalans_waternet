@@ -28,8 +28,8 @@ csvdir = "../data/input_csv"
 file_df = wb.utils.create_csvfile_table(csvdir)
 
 # Begin en eindtijd simulatie
-tmin = "1996"
-tmax = "2019"
+tmin = "1996-01-01"
+tmax = "2019-01-01"
 
 # Eag koppeling
 eag_koppeltabel = pd.read_csv("../data/eag_koppeling.txt", index_col=[0])
