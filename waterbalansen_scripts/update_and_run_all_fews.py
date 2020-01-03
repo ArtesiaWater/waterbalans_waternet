@@ -29,7 +29,7 @@ file_df = wb.utils.create_csvfile_table(csvdir)
 
 # Begin en eindtijd simulatie
 tmin = "1996-01-01"
-tmax = pd.datetime.now()
+tmax = pd.datetime.now().date() - pd.Timedelta(days=1)
 
 # Eag koppeling
 eag_koppeltabel = pd.read_csv("../data/eag_koppeling.txt", index_col=[0])
