@@ -127,6 +127,8 @@ for name in tqdm.tqdm(file_df.index, desc="Waterbalansen", ncols=0):
 
         # Simuleer waterbalans met parameters
         e.simulate(parameters, tmin=tmin, tmax=tmax)
+        # e.simulate_iterative(parameters, extra_iter=1,
+        #                      tmin=tmin, tmax=tmax)
 
         # Add balance to dictionary
         wb_dict[e.name] = e
@@ -163,3 +165,19 @@ inlaat_df["datetime"] = inlaat_df['datetime'].dt.strftime("%d-%m-%y %H:%M")
 
 # export file
 inlaat_df.to_csv("inlaten_testfile.csv", index=False)
+
+# export aggregated fluxes to csv per EAG/GAF
+for name, e in wb_dict.items():
+    fluxes = e.aggregate_fluxes()
+    longform_fluxes = fluxes.reset_index().melt(id_vars="index",
+                                                value_vars=fluxes.columns)
+
+    if e.name.endswith("GAF"):
+        longform_fluxes["locationId"] = e.name.split("-")[0]
+    else:
+        longform_fluxes["locationId"] = e.name
+
+    longform_fluxes.columns = ["datetime", "parameterId",
+                               "value", "locationId"]
+    longform_fluxes.to_csv("{0}_aggregated-fluxes.csv", sep=";", index=False,
+                           float_format="%.3f")
