@@ -16,8 +16,8 @@ import matplotlib as mpl
 mpl.interactive(True)
 
 # Run eag by name
-e = wb.run_eag_by_name("2100-GAF", csvdir="../data/input_csv", log_level="INFO")
-# e.dpi = 150
+e = wb.run_eag_by_name("3230-EAG-1", csvdir="../data/input_csv", log_level="INFO")
+e.plot.dpi = 50
 
 # Compare eag to Excel
 wb.utils.compare_to_excel_balance(e, pickle_dir="../data/excel_pklz")

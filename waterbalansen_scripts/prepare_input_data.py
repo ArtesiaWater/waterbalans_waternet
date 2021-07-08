@@ -1,4 +1,4 @@
-from .util import unzip_changed_files
+from util import unzip_changed_files
 
 # Unzip changed files
 unzip_changed_files("../data/input_csv.zip", "../data/input_csv",
