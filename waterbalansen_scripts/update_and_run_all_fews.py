@@ -7,15 +7,15 @@ Ensure you have access to a Local or Operational FEWS dbase.
    `eag.set_wsdl(<your wsdl here>)`
 
 """
+
 # %% Import modules
 # -----------------
 import os
 
-import tqdm
-import numpy as np
 import matplotlib as mpl
+import numpy as np
 import pandas as pd
-
+import tqdm
 import waterbalans as wb
 
 mpl.interactive(True)
@@ -68,22 +68,28 @@ for name in tqdm.tqdm(file_df.index, desc="Waterbalansen", ncols=0):
         # %% Inlezen gegevens
         # -------------------
         # bestand met deelgebieden en oppervlaktes:
-        deelgebieden = pd.read_csv(
-            os.path.join(csvdir, fbuckets), delimiter=";")
+        deelgebieden = pd.read_csv(os.path.join(csvdir, fbuckets), delimiter=";")
         # bestand met tijdreeksen, b.v. neerslag/verdamping:
         tijdreeksen = pd.read_csv(os.path.join(csvdir, freeks), delimiter=";")
         # bestand met parameters per deelgebied
         parameters = pd.read_csv(os.path.join(csvdir, fparams), delimiter=";")
         # bestand met overige tijdreeksen
         if not isinstance(fseries, float):
-            series = pd.read_csv(os.path.join(csvdir, fseries),
-                                 delimiter=";", index_col=[0], parse_dates=True)
+            series = pd.read_csv(
+                os.path.join(csvdir, fseries),
+                delimiter=";",
+                index_col=[0],
+                parse_dates=True,
+            )
         else:
             series = None
 
         # %% Simulation settings based on parameters
         # ------------------------------------------
-        if parameters.loc[parameters.ParamCode == "hTargetMin", "Waarde"].iloc[0] != -9999.:
+        if (
+            parameters.loc[parameters.ParamCode == "hTargetMin", "Waarde"].iloc[0]
+            != -9999.0
+        ):
             use_wl = True
         else:
             use_wl = False
@@ -91,9 +97,13 @@ for name in tqdm.tqdm(file_df.index, desc="Waterbalansen", ncols=0):
         # %% Model
         # --------
         # Maak bakjes model
-        e = wb.create_eag(eag_id, eag_name, deelgebieden,
-                          use_waterlevel_series=use_wl,
-                          logfile="waterbalans.log")
+        e = wb.create_eag(
+            eag_id,
+            eag_name,
+            deelgebieden,
+            use_waterlevel_series=use_wl,
+            logfile="waterbalans.log",
+        )
 
         # Voeg tijdreeksen toe
         e.add_series_from_database(tijdreeksen, tmin=tmin, tmax=tmax)
@@ -111,7 +121,9 @@ for name in tqdm.tqdm(file_df.index, desc="Waterbalansen", ncols=0):
 
         # Voeg tijdreeksen uit andere EAGs toe
         if e.name in eag_koppeltabel.index:
-            for series_name, other_eag in eag_koppeltabel.loc[e.name].dropna().iteritems():
+            for series_name, other_eag in (
+                eag_koppeltabel.loc[e.name].dropna().iteritems()
+            ):
                 try:
                     o = wb_dict[other_eag]
                     fluxes = o.aggregate_fluxes()
@@ -120,8 +132,7 @@ for name in tqdm.tqdm(file_df.index, desc="Waterbalansen", ncols=0):
                     elif series_name.startswith("Uitlaat"):
                         addseries = fluxes.loc[:, "berekende inlaat"]
 
-                    e.add_timeseries(addseries, series_name,
-                                     tmin=tmin, tmax=tmax)
+                    e.add_timeseries(addseries, series_name, tmin=tmin, tmax=tmax)
                 except KeyError as e:
                     print("No EAG with name {}!".format(other_eag))
 
@@ -139,17 +150,24 @@ for name in tqdm.tqdm(file_df.index, desc="Waterbalansen", ncols=0):
 
 # %% Collect information from EAGs and save to file
 # ----------------
-print("Elapsed time: {0:.1f} seconds".format(
-    (pd.datetime.now() - starttijd).total_seconds()))
+print(
+    "Elapsed time: {0:.1f} seconds".format(
+        (pd.datetime.now() - starttijd).total_seconds()
+    )
+)
 
-inlaten = pd.DataFrame(index=pd.date_range("1996-01-01", "2019-01-01", freq="D"),
-                       columns=[e.name for e in wb_dict.values()], dtype=np.float)
+inlaten = pd.DataFrame(
+    index=pd.date_range("1996-01-01", "2019-01-01", freq="D"),
+    columns=[e.name for e in wb_dict.values()],
+    dtype=np.float,
+)
 
 for name, e in wb_dict.items():
     fluxes = e.aggregate_fluxes()
     # get inlaat columns and add together
-    inlaat_cols = [col for col in fluxes.columns if col.lower().startswith("inlaat")] + \
-        ["berekende inlaat"]
+    inlaat_cols = [
+        col for col in fluxes.columns if col.lower().startswith("inlaat")
+    ] + ["berekende inlaat"]
     inlaten.loc[fluxes.index, name] = fluxes.loc[:, inlaat_cols].sum(axis=1)
 
 inlaat_df = inlaten.stack().reset_index()
@@ -157,11 +175,11 @@ inlaat_df.columns = ["datetime", "loc_ID", "value"]
 # convert to m3/s and round to 4 decimals
 inlaat_df["value"] = (inlaat_df["value"] / (24 * 60 * 60)).round(4)
 # remove -GAF from name
-inlaat_df["loc_ID"] = inlaat_df["loc_ID"].str.replace('-GAF', '', regex=True)
+inlaat_df["loc_ID"] = inlaat_df["loc_ID"].str.replace("-GAF", "", regex=True)
 # sort values bij location then date
 inlaat_df.sort_values(by=["loc_ID", "datetime"], inplace=True)
 # convert to different datetime str
-inlaat_df["datetime"] = inlaat_df['datetime'].dt.strftime("%d-%m-%y %H:%M")
+inlaat_df["datetime"] = inlaat_df["datetime"].dt.strftime("%d-%m-%y %H:%M")
 
 # export file
 inlaat_df.to_csv("inlaten_testfile.csv", index=False)
@@ -170,17 +188,18 @@ inlaat_df.to_csv("inlaten_testfile.csv", index=False)
 all_fluxes = []
 for name, e in wb_dict.items():
     fluxes = e.aggregate_fluxes()
-    longform_fluxes = fluxes.reset_index().melt(id_vars="index",
-                                                value_vars=fluxes.columns)
+    longform_fluxes = fluxes.reset_index().melt(
+        id_vars="index", value_vars=fluxes.columns
+    )
     if e.name.endswith("GAF"):
         longform_fluxes["locationId"] = e.name.split("-")[0]
     else:
         longform_fluxes["locationId"] = e.name
 
-    longform_fluxes.columns = ["datetime", "parameterId",
-                               "value", "locationId"]
+    longform_fluxes.columns = ["datetime", "parameterId", "value", "locationId"]
     all_fluxes.append(longform_fluxes)
 
 longform_fluxes = pd.concat(all_fluxes, axis=0)
-longform_fluxes.to_csv("aggregated-fluxes.csv", sep=";", index=False,
-                       float_format="%.3f")
+longform_fluxes.to_csv(
+    "aggregated-fluxes.csv", sep=";", index=False, float_format="%.3f"
+)

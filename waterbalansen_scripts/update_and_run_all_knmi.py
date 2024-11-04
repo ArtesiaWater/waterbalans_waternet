@@ -8,18 +8,16 @@ getting other series:
    `eag.set_wsdl(<your wsdl here>)`
 
 """
+
 # %% Import modules
 # -----------------
 import os
 
-import tqdm
-import numpy as np
 import matplotlib as mpl
+import numpy as np
 import pandas as pd
-from hkvfewspy import FewsTimeSeriesCollection
-from pastas.read import KnmiStation
-
 import waterbalans as wb
+from pastas.read import KnmiStation
 
 mpl.interactive(True)
 
@@ -35,30 +33,36 @@ tmin = "1996"
 tmax = "2019"
 
 # Neerslag koppeling FEWS -> KNMI
-fews2knmi = {"66013cal": 223,
-             "66004cal": 458,
-             "66015cal": 563,
-             "66005cal": 572,
-             "66011cal": 548,
-             "66017cal": 470,
-             "66009cal": 593,
-             "66014cal": 559,
-             "66016cal": 195,
-             "66006cal": 441,  # this FEWS ID is working!
-             "66010cal": 437,
-             "66002_VerdampingCAL": 240,
-             "66003_VerdampingCAL": 260}
+fews2knmi = {
+    "66013cal": 223,
+    "66004cal": 458,
+    "66015cal": 563,
+    "66005cal": 572,
+    "66011cal": 548,
+    "66017cal": 470,
+    "66009cal": 593,
+    "66014cal": 559,
+    "66016cal": 195,
+    "66006cal": 441,  # this FEWS ID is working!
+    "66010cal": 437,
+    "66002_VerdampingCAL": 240,
+    "66003_VerdampingCAL": 260,
+}
 
 # Get KNMI data up front
-df = KnmiStation.download(start=pd.Timestamp("1996-01-01"),
-                          end=pd.Timestamp("2019-01-01"),
-                          stns=list(fews2knmi.values())[-2:],
-                          vars="RH:EV24")
+df = KnmiStation.download(
+    start=pd.Timestamp("1996-01-01"),
+    end=pd.Timestamp("2019-01-01"),
+    stns=list(fews2knmi.values())[-2:],
+    vars="RH:EV24",
+)
 df.data.rename(columns={"RH": "RD"}, inplace=True)
-df2 = KnmiStation.download(start=pd.Timestamp("1996-01-01"),
-                           end=pd.Timestamp("2019-01-01"),
-                           stns=list(fews2knmi.values())[:-2],
-                           vars="RD")
+df2 = KnmiStation.download(
+    start=pd.Timestamp("1996-01-01"),
+    end=pd.Timestamp("2019-01-01"),
+    stns=list(fews2knmi.values())[:-2],
+    vars="RD",
+)
 df2.data["EV24"] = np.nan
 if np.any(df2.data.index.hour == 9):
     df2.data.index = df2.data.index.floor(freq="D") - pd.Timedelta(days=1)
@@ -78,7 +82,7 @@ for i in file_df.index:
         last.append(i)
     else:
         first.append(i)
-file_df = file_df.loc[first+last]
+file_df = file_df.loc[first + last]
 
 wb_dict = {}
 
@@ -94,8 +98,8 @@ for name in ["2510-EAG-3", "2010-GAF", "2140-EAG-6"]:
     eag_id = name.split("-")[-1]
     eag_name = name
 
-# %% Inlezen gegevens
-# -------------------
+    # %% Inlezen gegevens
+    # -------------------
     # bestand met deelgebieden en oppervlaktes:
     deelgebieden = pd.read_csv(os.path.join(csvdir, fbuckets), delimiter=";")
     # bestand met tijdreeksen, b.v. neerslag/verdamping:
@@ -104,14 +108,21 @@ for name in ["2510-EAG-3", "2010-GAF", "2140-EAG-6"]:
     parameters = pd.read_csv(os.path.join(csvdir, fparams), delimiter=";")
     # bestand met overige tijdreeksen
     if not isinstance(fseries, float):
-        series = pd.read_csv(os.path.join(csvdir, fseries),
-                             delimiter=";", index_col=[0], parse_dates=True)
+        series = pd.read_csv(
+            os.path.join(csvdir, fseries),
+            delimiter=";",
+            index_col=[0],
+            parse_dates=True,
+        )
     else:
         series = None
 
-# %% Simulation settings based on parameters
-# ------------------------------------------
-    if parameters.loc[parameters.ParamCode == "hTargetMin", "Waarde"].iloc[0] != -9999.:
+    # %% Simulation settings based on parameters
+    # ------------------------------------------
+    if (
+        parameters.loc[parameters.ParamCode == "hTargetMin", "Waarde"].iloc[0]
+        != -9999.0
+    ):
         use_wl = True
     else:
         use_wl = False
@@ -125,11 +136,10 @@ for name in ["2510-EAG-3", "2010-GAF", "2140-EAG-6"]:
     #     fewscode = tijdreeksen.loc[mask, "WaardeAlfa"].iloc[0].split("|")[col]
     #     tijdreeksen.loc[mask, "Waarde"] = int(fews2knmi[fewscode])
 
-# %% Model
-# --------
+    # %% Model
+    # --------
     # Maak bakjes model
-    e = wb.create_eag(eag_id, eag_name, deelgebieden,
-                      use_waterlevel_series=use_wl)
+    e = wb.create_eag(eag_id, eag_name, deelgebieden, use_waterlevel_series=use_wl)
 
     # Voeg tijdreeksen toe
     e.add_series_from_database(tijdreeksen, tmin=tmin, tmax=tmax)
@@ -143,16 +153,22 @@ for name in ["2510-EAG-3", "2010-GAF", "2140-EAG-6"]:
             for b in mengriool:
                 b.use_eag_cso_series = False
 
-    mask = (tijdreeksen.ClusterType == "Neerslag") & (
-        tijdreeksen.ParamType == "FEWS")
+    mask = (tijdreeksen.ClusterType == "Neerslag") & (tijdreeksen.ParamType == "FEWS")
     fewscode = tijdreeksen.loc[mask, "WaardeAlfa"].iloc[0].split("|")[2]
-    e.add_timeseries(knmi.loc[knmi.STN == fews2knmi[fewscode], "RD"],
-                     name="Neerslag", tmin=tmin, tmax=tmax)
-    mask = (tijdreeksen.ClusterType == "Verdamping") & (
-        tijdreeksen.ParamType == "FEWS")
+    e.add_timeseries(
+        knmi.loc[knmi.STN == fews2knmi[fewscode], "RD"],
+        name="Neerslag",
+        tmin=tmin,
+        tmax=tmax,
+    )
+    mask = (tijdreeksen.ClusterType == "Verdamping") & (tijdreeksen.ParamType == "FEWS")
     fewscode = tijdreeksen.loc[mask, "WaardeAlfa"].iloc[0].split("|")[1]
-    e.add_timeseries(knmi.loc[knmi.STN == fews2knmi[fewscode], "EV24"],
-                     name="Verdamping", tmin=tmin, tmax=tmax)
+    e.add_timeseries(
+        knmi.loc[knmi.STN == fews2knmi[fewscode], "EV24"],
+        name="Verdamping",
+        tmin=tmin,
+        tmax=tmax,
+    )
 
     # Voeg tijdreeksen uit andere EAGs toe
     if e.name in eag_koppeltabel.index:
@@ -161,7 +177,7 @@ for name in ["2510-EAG-3", "2010-GAF", "2140-EAG-6"]:
                 o = wb_dict[other_eag]
                 fluxes = o.aggregate_fluxes()
                 if series_name.startswith("Inlaat"):
-                    addseries = -1*fluxes.loc[:, "berekende uitlaat"]
+                    addseries = -1 * fluxes.loc[:, "berekende uitlaat"]
                 elif series_name.startswith("Uitlaat"):
                     addseries = fluxes.loc[:, "berekende inlaat"]
 
@@ -177,11 +193,16 @@ for name in ["2510-EAG-3", "2010-GAF", "2140-EAG-6"]:
 
 # %% End of script
 # ----------------
-print("Elapsed time: {0:.1f} seconds".format(
-    (pd.datetime.now() - starttijd).total_seconds()))
+print(
+    "Elapsed time: {0:.1f} seconds".format(
+        (pd.datetime.now() - starttijd).total_seconds()
+    )
+)
 
-inlaten = pd.DataFrame(index=pd.date_range("1996-01-01", "2019-01-01", freq="D"),
-                       columns=[e.name for e in wb_dict.values()])
+inlaten = pd.DataFrame(
+    index=pd.date_range("1996-01-01", "2019-01-01", freq="D"),
+    columns=[e.name for e in wb_dict.values()],
+)
 
 for name, e in wb_dict.items():
     fluxes = e.aggregate_fluxes()
