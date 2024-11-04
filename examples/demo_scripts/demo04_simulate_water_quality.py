@@ -17,7 +17,7 @@ import pandas as pd
 
 mpl.interactive(True)
 
-starttijd = pd.datetime.now()
+starttijd = pd.Timestamp.now()
 
 # Basisgegevens
 # -------------
@@ -99,6 +99,6 @@ ax = e.plot.wq_loading(mass_in, mass_out)
 
 print(
     "Elapsed time: {0:.1f} seconds".format(
-        (pd.datetime.now() - starttijd).total_seconds()
+        (pd.Timestamp.now() - starttijd).total_seconds()
     )
 )

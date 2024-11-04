@@ -1,3 +1,4 @@
+# %%
 import waterbalans as wb
 
 """ DEMO 03: Update waterbalance with data from FEWS
@@ -15,7 +16,7 @@ import pandas as pd
 
 mpl.interactive(True)
 
-starttijd = pd.datetime.now()
+starttijd = pd.Timestamp.now()
 
 # Basisgegevens
 # -------------
@@ -66,6 +67,6 @@ e.plot.aggregated()
 
 print(
     "Elapsed time: {0:.1f} seconds".format(
-        (pd.datetime.now() - starttijd).total_seconds()
+        (pd.Timestamp.now() - starttijd).total_seconds()
     )
 )

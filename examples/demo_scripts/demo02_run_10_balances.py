@@ -1,3 +1,4 @@
+# %%
 import waterbalans as wb
 from tqdm import tqdm
 
@@ -19,7 +20,7 @@ import pandas as pd
 
 mpl.interactive(True)
 
-starttijd = pd.datetime.now()
+starttijd = pd.Timestamp.now()
 
 # Basisgegevens
 # -------------
@@ -92,6 +93,6 @@ for obj_name in tqdm(eag_gaf_ids, desc="Building and simulating", ncols=0):
 print(wb_list)
 print(
     "Elapsed time: {0:.1f} seconds".format(
-        (pd.datetime.now() - starttijd).total_seconds()
+        (pd.Timestamp.now() - starttijd).total_seconds()
     )
 )
