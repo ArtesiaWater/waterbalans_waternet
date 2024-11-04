@@ -1,21 +1,24 @@
 name: waterbalans
 channels:
-  - defaults
+  - conda-forge
 dependencies:
-  - python=3.7
+  - python=3.11
   - geopandas
   - jupyter
   - jupyterlab
   - numpy
-  - pandas=1.3.0
+  - pandas
   - pip
   - scipy
   - shapely
   - tqdm
   - xlrd
+  - openpyxl
+  - pyogrio
   - pip:
     - descartes
     - dateparser
     - hkvfewspy==0.6.2
     - requests
     - zeep
+    - pastas
