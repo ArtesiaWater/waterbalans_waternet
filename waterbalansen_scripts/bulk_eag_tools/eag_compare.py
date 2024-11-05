@@ -1,18 +1,15 @@
 import os
 
 import geopandas as gpd
-import matplotlib.pyplot as plt
 import matplotlib.patheffects as PathEffects
-import numpy as np
+import matplotlib.pyplot as plt
 import pandas as pd
+import waterbalans as wb
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from shapely.algorithms import polylabel
 
-import waterbalans as wb
-
 
 class EagComparison:
-
     def __init__(self, csvdir, filter_str=None):
         self.csvdir = csvdir
         self.file_df = wb.utils.create_csvfile_table(csvdir)
@@ -25,11 +22,9 @@ class EagComparison:
             self.file_df.drop(drop_rows, axis=0, inplace=True)
 
         self.modelstructure = self.get_modelstructure()
-        self._bakjeid_to_name = self.modelstructure.loc[:, [
-            "BakjeID", "BakjePyCode"]]
+        self._bakjeid_to_name = self.modelstructure.loc[:, ["BakjeID", "BakjePyCode"]]
 
     def get_all_parameters(self):
-
         df_list = []
 
         for f in self.file_df.param:
@@ -39,7 +34,6 @@ class EagComparison:
         return pd.concat(df_list, axis=0, ignore_index=True)
 
     def get_parameter(self, parameter):
-
         all_params = self.get_all_parameters()
         mask = all_params.ParamCode == parameter
         if mask.sum() == 0:
@@ -107,15 +101,13 @@ class EagComparison:
         return pd.concat(df_list, axis=0, ignore_index=True)
 
     def percentage_open_water(self):
-
         ms = self.modelstructure
-        area_water = ms.loc[ms.BakjePyCode == "Water",
-                            ["EAGCode", "OppWaarde"]]
+        area_water = ms.loc[ms.BakjePyCode == "Water", ["EAGCode", "OppWaarde"]]
         area_water.set_index("EAGCode", inplace=True)
         area_water = area_water.squeeze()
         gr = ms.groupby("EAGCode")
         area_tot = gr["OppWaarde"].sum()
-        pw = area_water.divide(area_tot).multiply(100.)
+        pw = area_water.divide(area_tot).multiply(100.0)
         pw.name = "Open Water %"
 
         return pw
@@ -136,7 +128,6 @@ def create_gdf(df, shapefile, eag_code_column=""):
 
 
 def plot_gdf(gdf, color_column, ax=None, labels=True, fontsize=5, **kwargs):
-
     if ax is None:
         fig, ax = plt.subplots(1, 1, figsize=(10, 10), dpi=150)
 
@@ -157,23 +148,25 @@ def plot_gdf(gdf, color_column, ax=None, labels=True, fontsize=5, **kwargs):
     else:
         vmax = gdf[color_column].max()
 
-    sm = plt.cm.ScalarMappable(cmap=cmap,
-                               norm=plt.Normalize(vmin=vmin,
-                                                  vmax=vmax))
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=vmin, vmax=vmax))
     # fake up the array of the scalar mappable.
     sm._A = []
     cbaxes = inset_axes(ax, width="30%", height="3%", loc="upper right")
-    plt.colorbar(sm, cax=cbaxes, orientation='horizontal')
+    plt.colorbar(sm, cax=cbaxes, orientation="horizontal")
     cbaxes.set_xlabel(color_column)
 
     if labels:
         xy = find_visual_centers(gdf, tolerance=1.0)
         for i in xy.index:
-            ax.annotate(i, (xy.loc[i, "x"], xy.loc[i, "y"]),
-                        fontsize=fontsize, horizontalalignment="center",
-                        color="k", fontweight="bold",
-                        path_effects=[PathEffects.withStroke(linewidth=2,
-                                                             foreground="w")])
+            ax.annotate(
+                i,
+                (xy.loc[i, "x"], xy.loc[i, "y"]),
+                fontsize=fontsize,
+                horizontalalignment="center",
+                color="k",
+                fontweight="bold",
+                path_effects=[PathEffects.withStroke(linewidth=2, foreground="w")],
+            )
 
     return ax
 
@@ -235,6 +228,13 @@ if __name__ == "__main__":
 
     # plot gdf
     col = other.name
-    ax = plot_gdf(gdf, color_column=col, cmap="RdBu",
-                  vmin=gdf[col].min(), vmax=gdf[col].max(),
-                  labels=True, fontsize=7, alpha=1.0)
+    ax = plot_gdf(
+        gdf,
+        color_column=col,
+        cmap="RdBu",
+        vmin=gdf[col].min(),
+        vmax=gdf[col].max(),
+        labels=True,
+        fontsize=7,
+        alpha=1.0,
+    )

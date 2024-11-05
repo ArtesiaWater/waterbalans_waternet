@@ -11,8 +11,9 @@ inflow for "Het Boezem Model". Use `update_and_run_all_fews.py` for that!
 
 """
 
-import waterbalans as wb
 import matplotlib as mpl
+import waterbalans as wb
+
 mpl.interactive(True)
 
 # Run eag by name

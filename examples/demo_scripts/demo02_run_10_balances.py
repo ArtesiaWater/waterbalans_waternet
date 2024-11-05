@@ -1,5 +1,7 @@
-from tqdm import tqdm
+# %%
 import waterbalans as wb
+from tqdm import tqdm
+
 """ DEMO 02: Run 10 balances and plot output
 
 Minimal example that runs 10 waterbalances either
@@ -12,17 +14,29 @@ Date: 11-04-2019
 # %% Import modules
 # -----------------
 import os
-import pandas as pd
+
 import matplotlib as mpl
+import pandas as pd
+
 mpl.interactive(True)
 
-starttijd = pd.datetime.now()
+starttijd = pd.Timestamp.now()
 
 # Basisgegevens
 # -------------
 # Namen van EAGs/GAFs:
-eag_gaf_ids = ['2250-EAG-2', '2130-EAG-2', '2140-EAG-3', '2140-EAG-6', '2500-EAG-6',
-               '2010-GAF', '2110-GAF', '2100-GAF', '2120-GAF', '2130-GAF', ]
+eag_gaf_ids = [
+    "2250-EAG-2",
+    "2130-EAG-2",
+    "2140-EAG-3",
+    "2140-EAG-6",
+    "2500-EAG-6",
+    "2010-GAF",
+    "2110-GAF",
+    "2100-GAF",
+    "2120-GAF",
+    "2130-GAF",
+]
 
 # Tabel met alle bestanden per EAG/GAF:
 csvdir = r"../../data/input_csv"
@@ -55,8 +69,9 @@ for obj_name in tqdm(eag_gaf_ids, desc="Building and simulating", ncols=0):
     parameters = pd.read_csv(os.path.join(csvdir, fparams), delimiter=";")
 
     # bestand met overige tijdreeksen
-    series = pd.read_csv(os.path.join(csvdir, fseries), delimiter=";",
-                         index_col=[0], parse_dates=True)
+    series = pd.read_csv(
+        os.path.join(csvdir, fseries), delimiter=";", index_col=[0], parse_dates=True
+    )
 
     # %% Model
     # --------
@@ -76,5 +91,8 @@ for obj_name in tqdm(eag_gaf_ids, desc="Building and simulating", ncols=0):
     wb_list.append(e)
 
 print(wb_list)
-print("Elapsed time: {0:.1f} seconds".format(
-    (pd.datetime.now() - starttijd).total_seconds()))
+print(
+    "Elapsed time: {0:.1f} seconds".format(
+        (pd.Timestamp.now() - starttijd).total_seconds()
+    )
+)

@@ -1,5 +1,6 @@
-import waterbalans as wb
 import matplotlib.pyplot as plt
+import waterbalans as wb
+
 """ DEMO 04: Calculate phosphor concentration
 
 Minimal example that calculates the phosphor concentration
@@ -11,12 +12,12 @@ Date: 11-04-2019
 """
 # %% Import modules
 # -----------------
-import os
-import pandas as pd
 import matplotlib as mpl
+import pandas as pd
+
 mpl.interactive(True)
 
-starttijd = pd.datetime.now()
+starttijd = pd.Timestamp.now()
 
 # Basisgegevens
 # -------------
@@ -31,29 +32,34 @@ tmax = "2015"
 # %% Inlezen gegevens
 # -------------------
 # bestand met deelgebieden en oppervlaktes:
-deelgebieden = pd.read_csv(
-    r"../../data/input_csv/opp_60_2140-EAG-3.csv", delimiter=";")
+deelgebieden = pd.read_csv(r"../../data/input_csv/opp_60_2140-EAG-3.csv", delimiter=";")
 
 # bestand met tijdreeksen, b.v. neerslag/verdamping:
 tijdreeksen = pd.read_csv(
-    r"../../data/input_csv/reeks_60_2140-EAG-3.csv", delimiter=";")
-dropmask = (tijdreeksen.ParamType == "FEWS") | (tijdreeksen.ParamType == "KNMI") | \
-    (tijdreeksen.ParamType == "Local")
+    r"../../data/input_csv/reeks_60_2140-EAG-3.csv", delimiter=";"
+)
+dropmask = (
+    (tijdreeksen.ParamType == "FEWS")
+    | (tijdreeksen.ParamType == "KNMI")
+    | (tijdreeksen.ParamType == "Local")
+)
 tijdreeksen.drop(tijdreeksen.loc[dropmask].index, inplace=True)
 
 # bestand met parameters per deelgebied
-parameters = pd.read_csv(
-    r"../../data/input_csv/param_60_2140-EAG-3.csv", delimiter=";")
+parameters = pd.read_csv(r"../../data/input_csv/param_60_2140-EAG-3.csv", delimiter=";")
 
 # bestand met overige tijdreeksen
 series = pd.read_csv(
-    r"../../data/input_csv/series_60_2140-EAG-3.csv", delimiter=";",
-    index_col=[1], parse_dates=True)
+    r"../../data/input_csv/series_60_2140-EAG-3.csv",
+    delimiter=";",
+    index_col=[1],
+    parse_dates=True,
+)
 
 # bestand met concentraties van stof per flux
 fosfor = pd.read_csv(
-    r"../../data/input_csv/stoffen_fosfor_60_2140-EAG-3.csv", delimiter=";",
-    decimal=",")
+    r"../../data/input_csv/stoffen_fosfor_60_2140-EAG-3.csv", delimiter=";", decimal=","
+)
 fosfor.columns = [icol.capitalize() for icol in fosfor.columns]
 fosfor.replace("Riolering", "q_cso", inplace=True)
 
@@ -73,8 +79,7 @@ e.simulate(parameters, tmin=tmin, tmax=tmax)
 
 # Simuleer de waterkwaliteit
 mass_in, mass_out, mass_fosfor = e.simulate_wq(fosfor)
-mass_in_max, mass_out_max, mass_fosfor_max = e.simulate_wq(
-    fosfor, increment=True)
+mass_in_max, mass_out_max, mass_fosfor_max = e.simulate_wq(fosfor, increment=True)
 
 # Bereken de concentratie
 C_fosfor = mass_fosfor / e.water.storage["storage"]
@@ -92,5 +97,8 @@ fig.tight_layout()
 
 ax = e.plot.wq_loading(mass_in, mass_out)
 
-print("Elapsed time: {0:.1f} seconds".format(
-    (pd.datetime.now() - starttijd).total_seconds()))
+print(
+    "Elapsed time: {0:.1f} seconds".format(
+        (pd.Timestamp.now() - starttijd).total_seconds()
+    )
+)
